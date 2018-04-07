@@ -626,7 +626,11 @@ function textureToCanvas(texture: TextureTile): Viewer.Texture {
         imgData.data.set(texture.pixels);
     }
 
-    canvas.title = '0x' + texture.addr.toString(16) + '  ' + texture.format.toString(16) + '  ' + texture.dstFormat;
+    if ("addr" in texture && "format" in texture && "dstFormat" in texture) {
+        canvas.title = '0x' + texture.addr.toString(16) + '  ' + texture.format.toString(16) + '  ' + texture.dstFormat;
+    } else {
+        canvas.title = '(Malformed)'
+    }
     ctx.putImageData(imgData, 0, 0);
 
     const surfaces = [ canvas ];
