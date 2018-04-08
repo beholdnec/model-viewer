@@ -44,10 +44,19 @@ void main() {
     }
 }
 
+class CombinerUniforms {
+    public A: WebGLUniformLocation;
+    public B: WebGLUniformLocation;
+    public C: WebGLUniformLocation;
+    public D: WebGLUniformLocation;
+}
+
 export class F3DEX2Program extends Program {
     public txsLocation: WebGLUniformLocation;
     public useVertexColorsLocation: WebGLUniformLocation;
     public alphaTestLocation: WebGLUniformLocation;
+    public colorCombiners: Array<CombinerUniforms>;
+    public alphaCombiners: Array<CombinerUniforms>;
     static a_Position = 0;
     static a_UV = 1;
     static a_Color = 2;
@@ -76,6 +85,14 @@ varying vec4 v_color;
 uniform sampler2D u_texture;
 uniform bool u_useVertexColors;
 uniform int u_alphaTest;
+struct Combiner {
+    int A;
+    int B;
+    int C;
+    int D;
+};
+uniform Combiner u_colorCombiners[2];
+uniform Combiner u_alphaCombiners[2];
 
 vec4 n64Texture2D(sampler2D tex, vec2 texCoord) {
     vec2 texSize = vec2(textureSize(tex, 0));
@@ -87,10 +104,119 @@ vec4 n64Texture2D(sampler2D tex, vec2 texCoord) {
     return c0 + abs(offset.x) * (c1 - c0) + abs(offset.y) * (c2 - c0);		
 }
 
+vec3 getSubAColor(vec4 combined, int mode) {
+    vec3 result = vec3(0.0);
+    switch (mode) {
+    case 0: // COMBINED
+        result = combined.rgb;
+        break;
+    case 1: // TEXEL0
+        result = n64Texture2D(u_texture, v_uv).rgb;
+        break;
+    case 4: // SHADE
+        result = vec3(1.0); // TODO
+        break;
+    default:
+        result = vec3(0.0);
+        break;
+    }
+    return result;
+}
+
+vec3 getSubBColor(vec4 combined, int mode) {
+    vec3 result = vec3(0.0);
+    switch (mode) {
+    case 1: // TEXEL0
+        result = n64Texture2D(u_texture, v_uv).rgb;
+        break;
+    default:
+        result = vec3(0.0);
+        break;
+    }
+    return result;
+}
+
+vec3 getMulColor(vec4 combined, int mode) {
+    vec3 result = vec3(0.0);
+    switch (mode) {
+    case 3: // PRIMITIVE
+        result = v_color.rgb; // TODO: Implement u_useVertexColors option
+        break;
+    case 4: // SHADE
+        result = vec3(1.0); // TODO
+        break;
+    case 12: // ENV_ALPHA
+        result = vec3(1.0); // TODO
+        break;
+    default:
+        result = vec3(0.0);
+        break;
+    }
+    return result;
+}
+
+vec3 getAddColor(vec4 combined, int mode) {
+    vec3 result = vec3(0.0);
+    switch (mode) {
+    case 0: // COMBINED
+        result = combined.rgb;
+        break;
+    default:
+        result = vec3(0.0);
+        break;
+    }
+    return result;
+}
+
+float getMulAlpha(vec4 combined, int mode) {
+    float result = 0.0;
+    switch (mode) {
+    default:
+        result = 0.0;
+        break;
+    }
+    return result;
+}
+
+float getAddSubAlpha(vec4 combined, int mode) {
+    float result = 0.0;
+    switch (mode) {
+    case 0: // COMBINED
+        result = combined.a;
+        break;
+    case 1: // TEXEL0
+        result = n64Texture2D(u_texture, v_uv).a;
+        break;
+    case 6: // 1
+        result = 1.0;
+        break;
+    default:
+        result = 0.0;
+        break;
+    }
+    return result;
+}
+
+vec4 combine(vec4 combined, int combiner) {
+    vec3 cA = getSubAColor(combined, u_colorCombiners[combiner].A);
+    vec3 cB = getSubBColor(combined, u_colorCombiners[combiner].B);
+    vec3 cC = getMulColor(combined, u_colorCombiners[combiner].C);
+    vec3 cD = getAddColor(combined, u_colorCombiners[combiner].D);
+    vec3 c = (cA - cB) * cC + cD;
+    float aA = getAddSubAlpha(combined, u_alphaCombiners[combiner].A);
+    float aB = getAddSubAlpha(combined, u_alphaCombiners[combiner].B);
+    float aC = getMulAlpha(combined, u_alphaCombiners[combiner].C);
+    float aD = getAddSubAlpha(combined, u_alphaCombiners[combiner].D);
+    float a = (aA - aB) * aC + aD;
+    return vec4(c, a);
+}
+
 void main() {
-    gl_FragColor = n64Texture2D(u_texture, v_uv);
-    if (u_useVertexColors)
-        gl_FragColor *= v_color;
+    gl_FragColor = combine(vec4(0.0), 1);
+    // TODO: Don't perform second combine if combiner is in 1-cycle mode.
+    gl_FragColor = combine(gl_FragColor, 0);
+    //if (u_useVertexColors)
+    //    gl_FragColor *= v_color;
     if (u_alphaTest > 0 && gl_FragColor.a < 0.0125)
         discard;
 }
@@ -102,6 +228,23 @@ void main() {
         this.txsLocation = gl.getUniformLocation(prog, "u_txs");
         this.useVertexColorsLocation = gl.getUniformLocation(prog, "u_useVertexColors");
         this.alphaTestLocation = gl.getUniformLocation(prog, "u_alphaTest");
+        this.colorCombiners = new Array(2);
+        this.alphaCombiners = new Array(2);
+        for (let i = 0; i < 2; i++) {
+            this.colorCombiners[i] = {
+                A: gl.getUniformLocation(prog, `u_colorCombiners[${i}].A`),
+                B: gl.getUniformLocation(prog, `u_colorCombiners[${i}].B`),
+                C: gl.getUniformLocation(prog, `u_colorCombiners[${i}].C`),
+                D: gl.getUniformLocation(prog, `u_colorCombiners[${i}].D`),
+            };
+            this.alphaCombiners[i] = {
+                A: gl.getUniformLocation(prog, `u_alphaCombiners[${i}].A`),
+                B: gl.getUniformLocation(prog, `u_alphaCombiners[${i}].B`),
+                C: gl.getUniformLocation(prog, `u_alphaCombiners[${i}].C`),
+                D: gl.getUniformLocation(prog, `u_alphaCombiners[${i}].D`),
+            };
+            
+        }
     }
 }
 

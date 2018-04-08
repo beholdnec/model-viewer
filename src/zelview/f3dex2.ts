@@ -41,6 +41,64 @@ const enum UCodeCommands {
     RDPPIPESYNC = 0xE7,
 }
 
+const CCMUX = {
+    COMBINED: 0,
+    TEXEL0: 1,
+    TEXEL1: 2,
+    PRIMITIVE: 3,
+    SHADE: 4,
+    ENVIRONMENT: 5,
+    CENTER: 6,
+    SCALE: 6,
+    COMBINED_ALPHA: 7,
+    TEXEL0_ALPHA: 8,
+    TEXEL1_ALPHA: 9,
+    PRIMITIVE_ALPHA: 10,
+    SHADE_ALPHA: 11,
+    ENV_ALPHA: 12,
+    LOD_FRACTION: 13,
+    PRIM_LOD_FRAC: 14,
+    NOISE: 7,
+    K4: 7,
+    K5: 15,
+    _1: 6,
+    _0: 31,
+};
+
+const ACMUX = {
+    COMBINED: 0,
+    TEXEL0: 1,
+    TEXEL1: 2,
+    PRIMITIVE: 3,
+    SHADE: 4,
+    ENVIRONMENT: 5,
+    LOD_FRACTION: 0,
+    PRIM_LOD_FRAC: 6,
+    _1: 6,
+    _0: 7,
+};
+
+interface CombineMode {
+    // w0
+    mRGB1: number,
+    saRGB1: number,
+    mA0: number,
+    saA0: number,
+    mRGB0: number,
+    saRGB0: number,
+    // w1
+    aA1: number,
+    sbA1: number,
+    aRGB1: number,
+    aA0: number,
+    sbA0: number,
+    aRGB0: number,
+    mA1: number,
+    saA1: number,
+    sbRGB1: number,
+    sbRGB0: number,
+}
+
 class State {
     public gl: WebGL2RenderingContext;
 
@@ -55,6 +113,7 @@ class State {
     public vertexOffs: number;
 
     public geometryMode: number;
+    public combineMode: CombineMode;
     public otherModeL: number;
 
     public palettePixels: Uint8Array;
@@ -333,6 +392,65 @@ function r5g5b5a1(dst: Uint8Array, dstOffs: number, p: number) {
     dst[dstOffs + 1] = g;
     dst[dstOffs + 2] = b;
     dst[dstOffs + 3] = a;
+}
+
+function bitfieldExtract(value: number, offset: number, bits: number) {
+    return (value >> offset) & ((1 << bits) - 1);
+}
+
+let numCombinesLogged = 0;
+function cmd_SETCOMBINE(state: State, w0: number, w1: number) {
+    const params: CombineMode = {
+        // w0
+        mRGB1: bitfieldExtract(w0, 0, 5),
+        saRGB1: bitfieldExtract(w0, 5, 4),
+        mA0: bitfieldExtract(w0, 9, 3),
+        saA0: bitfieldExtract(w0, 12, 3),
+        mRGB0: bitfieldExtract(w0, 15, 5),
+        saRGB0: bitfieldExtract(w0, 20, 4),
+        // w1
+        aA1: bitfieldExtract(w1, 0, 3),
+        sbA1: bitfieldExtract(w1, 3, 3),
+        aRGB1: bitfieldExtract(w1, 6, 3),
+        aA0: bitfieldExtract(w1, 9, 3),
+        sbA0: bitfieldExtract(w1, 12, 3),
+        aRGB0: bitfieldExtract(w1, 15, 3),
+        mA1: bitfieldExtract(w1, 18, 3),
+        saA1: bitfieldExtract(w1, 21, 3),
+        sbRGB1: bitfieldExtract(w1, 24, 4),
+        sbRGB0: bitfieldExtract(w1, 28, 4),
+    };
+    if (numCombinesLogged < 16) {
+        console.log(`SETCOMBINE ${JSON.stringify(params, null, '\t')}`);
+        numCombinesLogged++;
+    }
+    state.combineMode = params;
+    
+    flushDraw(state);
+    state.cmds.push((renderState: RenderState) => {
+        const gl = renderState.gl;
+        const prog = (<Render.F3DEX2Program> renderState.currentProgram);
+        
+        gl.uniform1i(prog.colorCombiners[0].A, params.saRGB0);
+        gl.uniform1i(prog.colorCombiners[0].B, params.sbRGB0);
+        gl.uniform1i(prog.colorCombiners[0].C, params.mRGB0);
+        gl.uniform1i(prog.colorCombiners[0].D, params.aRGB0);
+
+        gl.uniform1i(prog.colorCombiners[1].A, params.saRGB1);
+        gl.uniform1i(prog.colorCombiners[1].B, params.sbRGB1);
+        gl.uniform1i(prog.colorCombiners[1].C, params.mRGB1);
+        gl.uniform1i(prog.colorCombiners[1].D, params.aRGB1);
+
+        gl.uniform1i(prog.alphaCombiners[0].A, params.saA0);
+        gl.uniform1i(prog.alphaCombiners[0].B, params.sbA0);
+        gl.uniform1i(prog.alphaCombiners[0].C, params.mA0);
+        gl.uniform1i(prog.alphaCombiners[0].D, params.aA0);
+
+        gl.uniform1i(prog.alphaCombiners[1].A, params.saA1);
+        gl.uniform1i(prog.alphaCombiners[1].B, params.sbA1);
+        gl.uniform1i(prog.alphaCombiners[1].C, params.mA1);
+        gl.uniform1i(prog.alphaCombiners[1].D, params.aA1);
+    });
 }
 
 function cmd_SETTIMG(state: State, w0: number, w1: number) {
@@ -783,6 +901,7 @@ CommandDispatch[UCodeCommands.POPMTX] = cmd_POPMTX;
 CommandDispatch[UCodeCommands.SETOTHERMODE_L] = cmd_SETOTHERMODE_L;
 CommandDispatch[UCodeCommands.LOADTLUT] = cmd_LOADTLUT;
 CommandDispatch[UCodeCommands.TEXTURE] = cmd_TEXTURE;
+CommandDispatch[UCodeCommands.SETCOMBINE] = cmd_SETCOMBINE;
 CommandDispatch[UCodeCommands.SETTIMG] = cmd_SETTIMG;
 CommandDispatch[UCodeCommands.SETTILE] = cmd_SETTILE;
 CommandDispatch[UCodeCommands.SETTILESIZE] = cmd_SETTILESIZE;
