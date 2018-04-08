@@ -109,52 +109,32 @@ vec4 n64Texture2D(sampler2D tex, vec2 texCoord) {
     return c0 + abs(offset.x) * (c1 - c0) + abs(offset.y) * (c2 - c0);		
 }
 
-vec3 getSubAColor(vec4 combined, int mode) {
+vec3 getSubAColor(vec4 combined, vec4 texel0, vec4 texel1, int mode) {
     vec3 result = vec3(0.0);
     switch (mode) {
     case 0: // COMBINED
         result = combined.rgb;
         break;
     case 1: // TEXEL0
-        result = n64Texture2D(u_texture0, v_uv).rgb;
+        result = texel0.rgb;
         break;
     case 2: // TEXEL1
-        result = n64Texture2D(u_texture1, v_uv).rgb;
+        result = texel1.rgb;
         break;
-    case 4: // SHADE
-        result = vec3(1.0); // TODO
-        break;
-    default:
-        result = vec3(0.0);
-        break;
-    }
-    return result;
-}
-
-vec3 getSubBColor(vec4 combined, int mode) {
-    vec3 result = vec3(0.0);
-    switch (mode) {
-    case 1: // TEXEL0
-        result = n64Texture2D(u_texture0, v_uv).rgb;
-        break;
-    default:
-        result = vec3(0.0);
-        break;
-    }
-    return result;
-}
-
-vec3 getMulColor(vec4 combined, int mode) {
-    vec3 result = vec3(0.0);
-    switch (mode) {
     case 3: // PRIMITIVE
         result = v_color.rgb; // TODO: Implement u_useVertexColors option
         break;
     case 4: // SHADE
         result = vec3(1.0); // TODO
         break;
-    case 12: // ENV_ALPHA
+    case 5: // ENVIRONMENT
         result = vec3(1.0); // TODO
+        break;
+    case 6: // 1
+        result = vec3(1.0);
+        break;
+    case 7: // NOISE
+        result = vec3(0.5); // TODO
         break;
     default:
         result = vec3(0.0);
@@ -163,12 +143,33 @@ vec3 getMulColor(vec4 combined, int mode) {
     return result;
 }
 
-vec3 getAddColor(vec4 combined, int mode) {
+vec3 getSubBColor(vec4 combined, vec4 texel0, vec4 texel1, int mode) {
     vec3 result = vec3(0.0);
     switch (mode) {
     case 0: // COMBINED
         result = combined.rgb;
         break;
+    case 1: // TEXEL0
+        result = texel0.rgb;
+        break;
+    case 2: // TEXEL1
+        result = texel1.rgb;
+        break;
+    case 3: // PRIMITIVE
+        result = v_color.rgb; // TODO: Implement u_useVertexColors option
+        break;
+    case 4: // SHADE
+        result = vec3(1.0); // TODO
+        break;
+    case 5: // ENVIRONMENT
+        result = vec3(1.0); // TODO
+        break;
+    case 6: // CENTER
+        result = vec3(0.0); // TODO
+        break;
+    case 7: // K4
+        result = vec3(0.5); // TODO
+        break;
     default:
         result = vec3(0.0);
         break;
@@ -176,9 +177,119 @@ vec3 getAddColor(vec4 combined, int mode) {
     return result;
 }
 
-float getMulAlpha(vec4 combined, int mode) {
+vec3 getMulColor(vec4 combined, vec4 texel0, vec4 texel1, int mode) {
+    vec3 result = vec3(0.0);
+    switch (mode) {
+    case 0: // COMBINED
+        result = combined.rgb;
+        break;
+    case 1: // TEXEL0
+        result = texel0.rgb;
+        break;
+    case 2: // TEXEL1
+        result = texel1.rgb;
+        break;
+    case 3: // PRIMITIVE
+        result = v_color.rgb; // TODO: Implement u_useVertexColors option
+        break;
+    case 4: // SHADE
+        result = vec3(1.0); // TODO
+        break;
+    case 5: // ENVIRONMENT
+        result = vec3(1.0); // TODO
+        break;
+    case 6: // SCALE
+        result = vec3(1.0); // TODO
+        break;
+    case 7: // COMBINED_ALPHA
+        result = combined.aaa;
+        break;
+    case 8: // TEXEL0_ALPHA
+        result = texel0.aaa;
+        break;
+    case 9: // TEXEL1_ALPHA
+        result = texel1.aaa;
+        break;
+    case 10: // PRIMITIVE_ALPHA
+        result = v_color.aaa; // TODO: Implement u_useVertexColors option
+        break;
+    case 11: // SHADE_ALPHA
+        result = vec3(1.0); // TODO
+        break;
+    case 12: // ENV_ALPHA
+        result = vec3(1.0); // TODO
+        break;
+    case 13: // LOD_FRACTION
+        result = vec3(1.0); // TODO
+        break;
+    case 14: // PRIM_LOD_FRAC
+        result = vec3(1.0); // TODO
+        break;
+    case 15: // K5
+        result = vec3(0.5); // TODO
+        break;
+    default:
+        result = vec3(0.0);
+        break;
+    }
+    return result;
+}
+
+vec3 getAddColor(vec4 combined, vec4 texel0, vec4 texel1, int mode) {
+    vec3 result = vec3(0.0);
+    switch (mode) {
+    case 0: // COMBINED
+        result = combined.rgb;
+        break;
+    case 1: // TEXEL0
+        result = texel0.rgb;
+        break;
+    case 2: // TEXEL1
+        result = texel1.rgb;
+        break;
+    case 3: // PRIMITIVE
+        result = v_color.rgb; // TODO: implement u_useVertexColors option
+        break;
+    case 4: // SHADE
+        result = vec3(1.0); // TODO
+        break;
+    case 5: // ENVIRONMENT
+        result = vec3(1.0); // TODO
+        break;
+    case 6: // 1
+        result = vec3(1.0);
+        break;
+    default:
+        result = vec3(0.0);
+        break;
+    }
+    return result;
+}
+
+float getMulAlpha(vec4 combined, vec4 texel0, vec4 texel1, int mode) {
     float result = 0.0;
     switch (mode) {
+    case 0: // LOD_FRACTION
+        result = 1.0; // TODO
+        break;
+    case 1: // TEXEL0
+        result = texel0.a;
+        break;
+    case 2: // TEXEL1
+        result = texel1.a;
+        break;
+    case 3: // PRIMITIVE
+        result = v_color.a; // TODO: Implement u_useVertexColors option
+        break;
+    case 4: // SHADE
+        result = 1.0; // TODO
+        break;
+    case 5: // ENVIRONMENT
+        result = 1.0; // TODO
+        break;
+    case 6: // PRIM_LOD_FRAC
+        result = 1.0; // TODO
+        break;
     default:
         result = 0.0;
         break;
@@ -186,14 +297,26 @@ float getMulAlpha(vec4 combined, int mode) {
     return result;
 }
 
-float getAddSubAlpha(vec4 combined, int mode) {
+float getAddSubAlpha(vec4 combined, vec4 texel0, vec4 texel1, int mode) {
     float result = 0.0;
     switch (mode) {
     case 0: // COMBINED
         result = combined.a;
         break;
     case 1: // TEXEL0
-        result = n64Texture2D(u_texture0, v_uv).a;
+        result = texel0.a;
+        break;
+    case 2: // TEXEL1
+        result = texel1.a;
+        break;
+    case 3: // PRIMITIVE
+        result = v_color.a; // TODO: Implement u_useVertexColor option
+        break;
+    case 4: // SHADE
+        result = 1.0; // TODO
+        break;
+    case 5: // ENVIRONMENT
+        result = 1.0; // TODO
         break;
     case 6: // 1
         result = 1.0;
@@ -205,26 +328,28 @@ float getAddSubAlpha(vec4 combined, int mode) {
     return result;
 }
 
-vec4 combine(vec4 combined, int combiner) {
-    vec3 cA = getSubAColor(combined, u_colorCombiners[combiner].A);
-    vec3 cB = getSubBColor(combined, u_colorCombiners[combiner].B);
-    vec3 cC = getMulColor(combined, u_colorCombiners[combiner].C);
-    vec3 cD = getAddColor(combined, u_colorCombiners[combiner].D);
+vec4 combine(vec4 combined, vec4 texel0, vec4 texel1, int combiner) {
+    vec3 cA = getSubAColor(combined, texel0, texel1, u_colorCombiners[combiner].A);
+    vec3 cB = getSubBColor(combined, texel0, texel1, u_colorCombiners[combiner].B);
+    vec3 cC = getMulColor(combined, texel0, texel1, u_colorCombiners[combiner].C);
+    vec3 cD = getAddColor(combined, texel0, texel1, u_colorCombiners[combiner].D);
     vec3 c = (cA - cB) * cC + cD;
-    float aA = getAddSubAlpha(combined, u_alphaCombiners[combiner].A);
-    float aB = getAddSubAlpha(combined, u_alphaCombiners[combiner].B);
-    float aC = getMulAlpha(combined, u_alphaCombiners[combiner].C);
-    float aD = getAddSubAlpha(combined, u_alphaCombiners[combiner].D);
+    float aA = getAddSubAlpha(combined, texel0, texel1, u_alphaCombiners[combiner].A);
+    float aB = getAddSubAlpha(combined, texel0, texel1, u_alphaCombiners[combiner].B);
+    float aC = getMulAlpha(combined, texel0, texel1, u_alphaCombiners[combiner].C);
+    float aD = getAddSubAlpha(combined, texel0, texel1, u_alphaCombiners[combiner].D);
     float a = (aA - aB) * aC + aD;
     return vec4(c, a);
 }
 
 void main() {
+    vec4 texel0 = n64Texture2D(u_texture0, v_uv);
+    vec4 texel1 = n64Texture2D(u_texture1, v_uv);
     gl_FragColor = vec4(0.0);
     if (u_use2cycle) {
-        gl_FragColor = combine(gl_FragColor, 0);
+        gl_FragColor = combine(gl_FragColor, texel0, texel1, 0);
     }
-    gl_FragColor = combine(gl_FragColor, 1);
+    gl_FragColor = combine(gl_FragColor, texel0, texel1, 1);
     if (u_alphaTest > 0 && gl_FragColor.a < 0.0125)
         discard;
 }
