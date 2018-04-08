@@ -99,6 +99,8 @@ interface CombineMode {
     sbRGB0: number,
 }
 
+const NUM_TEXTURE_TILES = 2;
+
 class State {
     public gl: WebGL2RenderingContext;
 
@@ -132,6 +134,7 @@ class State {
 type TextureDestFormat = "i8" | "i8_a8" | "rgba8";
 
 interface TextureTile {
+    tileIdx: number;
     width: number;
     height: number;
     pixels: Uint8Array;
@@ -222,8 +225,10 @@ function tri(idxData: Uint8Array, offs: number, cmd: number) {
 }
 
 function flushTexture(state: State) {
-    if (state.textureTile)
-        loadTile(state, state.textureTile);
+    for (let i = 0; i < state.textureTiles.length; i++) {
+        if (state.textureTiles[i])
+            loadTile(state, state.textureTiles[i]);
+    }
 }
 
 function cmd_TRI1(state: State, w0: number, w1: number) {
@@ -286,7 +291,16 @@ const OtherModeL = {
     FORCE_BL: 0x4000,
 };
 
+let loggedsoml = 0;
 function cmd_SETOTHERMODE_L(state: State, w0: number, w1: number) {
+    const shift = bitfieldExtract(w0, 8, 8);
+    const len = bitfieldExtract(w0, 0, 8);
+
+    if (loggedsoml < 32) {
+        console.log(`SETOTHERMODE_L shift ${shift} len ${len} data ${w1}`);
+        loggedsoml++;
+    }
+
     const mode = 31 - (w0 & 0xFF);
     if (mode === 3) {
         const renderFlags = new RenderFlags();
@@ -322,6 +336,25 @@ function cmd_SETOTHERMODE_L(state: State, w0: number, w1: number) {
             gl.uniform1i(prog.alphaTestLocation, alphaTestMode);
         });
     }
+}
+
+let loggedsomh = 0;
+function cmd_SETOTHERMODE_H(state: State, w0: number, w1: number) {
+    const shift = bitfieldExtract(w0, 8, 8);
+    const len = bitfieldExtract(w0, 0, 8);
+
+    if (loggedsomh < 32) {
+        console.log(`SETOTHERMODE_H shift ${shift} len ${len} data ${w1}`);
+        loggedsomh++;
+    }
+
+    flushDraw(state);
+    state.cmds.push((renderState: RenderState) => {
+        const gl = renderState.gl;
+        const prog = (<Render.F3DEX2Program> renderState.currentProgram);
+        // FIXME: correctly set 2-cycle mode
+        gl.uniform1i(prog.use2cycle, 1);
+    });
 }
 
 function cmd_DL(state: State, w0: number, w1: number) {
@@ -500,6 +533,7 @@ function cmd_LOADTLUT(state: State, w0: number, w1: number) {
     const size = ((w1 & 0x00FFF000) >> 14) + 1;
     const dst = new Uint8Array(size * 4);
 
+    // FIXME: which tile?
     let srcOffs = state.lookupAddress(state.textureImageAddr);
     let dstOffs = 0;
 
@@ -744,9 +778,9 @@ function textureToCanvas(texture: TextureTile): Viewer.Texture {
         imgData.data.set(texture.pixels);
     }
 
-    if ("addr" in texture && "format" in texture && "dstFormat" in texture) {
+    try {
         canvas.title = '0x' + texture.addr.toString(16) + '  ' + texture.format.toString(16) + '  ' + texture.dstFormat;
-    } else {
+    } catch (e) {
         canvas.title = '(Malformed)'
     }
     ctx.putImageData(imgData, 0, 0);
@@ -800,6 +834,7 @@ function translateTexture(state: State, texture: TextureTile) {
     }
 
     const texId = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0 + texture.tileIdx);
     gl.bindTexture(gl.TEXTURE_2D, texId);
     // Filters are set to NEAREST here because filtering is performed in the fragment shader.
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -817,6 +852,7 @@ function translateTexture(state: State, texture: TextureTile) {
 
     gl.texImage2D(gl.TEXTURE_2D, 0, glFormat, texture.width, texture.height, 0, glFormat, gl.UNSIGNED_BYTE, texture.pixels);
     texture.glTextureId = texId;
+    gl.activeTexture(gl.TEXTURE0);
 
     state.textures.push(textureToCanvas(texture));
 }
@@ -899,6 +935,7 @@ CommandDispatch[UCodeCommands.DL] = cmd_DL;
 CommandDispatch[UCodeCommands.MTX] = cmd_MTX;
 CommandDispatch[UCodeCommands.POPMTX] = cmd_POPMTX;
 CommandDispatch[UCodeCommands.SETOTHERMODE_L] = cmd_SETOTHERMODE_L;
+CommandDispatch[UCodeCommands.SETOTHERMODE_H] = cmd_SETOTHERMODE_H;
 CommandDispatch[UCodeCommands.LOADTLUT] = cmd_LOADTLUT;
 CommandDispatch[UCodeCommands.TEXTURE] = cmd_TEXTURE;
 CommandDispatch[UCodeCommands.SETCOMBINE] = cmd_SETCOMBINE;
@@ -908,10 +945,14 @@ CommandDispatch[UCodeCommands.SETTILESIZE] = cmd_SETTILESIZE;
 
 const F3DEX2 = {};
 
+let warned = false;
 function loadTextureBlock(state: State, cmds: number[][]) {
     const tileIdx = (cmds[5][1] >> 24) & 0x7;
-    if (tileIdx !== 0)
+    if (tileIdx !== 0 && tileIdx !== 1) {
+        warned = true;
+        console.log(`tileIdx ${tileIdx} ignored`);
         return;
+    }
 
     cmd_SETTIMG(state, cmds[0][0], cmds[0][1]);
     cmd_SETTILE(state, cmds[5][0], cmds[5][1]);
@@ -923,9 +964,14 @@ function loadTextureBlock(state: State, cmds: number[][]) {
     flushDraw(state);
     state.cmds.push((renderState: RenderState) => {
         const gl = renderState.gl;
+        gl.activeTexture(gl.TEXTURE0 + tileIdx);
         gl.bindTexture(gl.TEXTURE_2D, tile.glTextureId);
+        gl.activeTexture(gl.TEXTURE0);
         const prog = (<Render.F3DEX2Program> renderState.currentProgram);
-        gl.uniform2fv(prog.txsLocation, [1 / tile.width, 1 / tile.height]);
+        // TODO: Set texture uniforms somewhere else?
+        gl.uniform1i(prog.texture0Location, 0);
+        gl.uniform1i(prog.texture1Location, 1);
+        gl.uniform2fv(prog.txsLocation[tileIdx], [1 / tile.width, 1 / tile.height]);
     });
 }
 
@@ -1006,6 +1052,8 @@ export function readDL(gl: WebGL2RenderingContext, rom: ZELVIEW0.ZELVIEW0, banks
     state.vertexBuffer = new Float32Array(32 * VERTEX_SIZE);
     state.vertexData = [];
     state.vertexOffs = 0;
+
+    state.textureTiles = new Array(NUM_TEXTURE_TILES);
 
     state.rom = rom;
     state.banks = banks;

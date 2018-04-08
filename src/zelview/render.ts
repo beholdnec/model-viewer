@@ -52,7 +52,10 @@ class CombinerUniforms {
 }
 
 export class F3DEX2Program extends Program {
-    public txsLocation: WebGLUniformLocation;
+    public texture0Location: WebGLUniformLocation;
+    public texture1Location: WebGLUniformLocation;
+    public txsLocation: Array<WebGLUniformLocation>;
+    public use2cycle: WebGLUniformLocation;
     public useVertexColorsLocation: WebGLUniformLocation;
     public alphaTestLocation: WebGLUniformLocation;
     public colorCombiners: Array<CombinerUniforms>;
@@ -69,11 +72,11 @@ layout(location = ${F3DEX2Program.a_UV}) attribute vec2 a_UV;
 layout(location = ${F3DEX2Program.a_Color}) attribute vec4 a_Color;
 out vec4 v_color;
 out vec2 v_uv;
-uniform vec2 u_txs;
+uniform vec2 u_txs[2];
 
 void main() {
     gl_Position = u_projection * u_modelView * vec4(a_Position, 1.0);
-    v_uv = a_UV * u_txs;
+    v_uv = a_UV * u_txs[0]; // ??? Is there a second set of texcoords?
     v_color = a_Color;
 }
 `;
@@ -82,7 +85,9 @@ void main() {
 precision mediump float;
 varying vec2 v_uv;
 varying vec4 v_color;
-uniform sampler2D u_texture;
+uniform sampler2D u_texture0;
+uniform sampler2D u_texture1;
+uniform bool u_use2cycle;
 uniform bool u_useVertexColors;
 uniform int u_alphaTest;
 struct Combiner {
@@ -111,7 +116,10 @@ vec3 getSubAColor(vec4 combined, int mode) {
         result = combined.rgb;
         break;
     case 1: // TEXEL0
-        result = n64Texture2D(u_texture, v_uv).rgb;
+        result = n64Texture2D(u_texture0, v_uv).rgb;
+        break;
+    case 2: // TEXEL1
+        result = n64Texture2D(u_texture1, v_uv).rgb;
         break;
     case 4: // SHADE
         result = vec3(1.0); // TODO
@@ -127,7 +135,7 @@ vec3 getSubBColor(vec4 combined, int mode) {
     vec3 result = vec3(0.0);
     switch (mode) {
     case 1: // TEXEL0
-        result = n64Texture2D(u_texture, v_uv).rgb;
+        result = n64Texture2D(u_texture0, v_uv).rgb;
         break;
     default:
         result = vec3(0.0);
@@ -185,7 +193,7 @@ float getAddSubAlpha(vec4 combined, int mode) {
         result = combined.a;
         break;
     case 1: // TEXEL0
-        result = n64Texture2D(u_texture, v_uv).a;
+        result = n64Texture2D(u_texture0, v_uv).a;
         break;
     case 6: // 1
         result = 1.0;
@@ -212,11 +220,11 @@ vec4 combine(vec4 combined, int combiner) {
 }
 
 void main() {
-    gl_FragColor = combine(vec4(0.0), 1);
-    // TODO: Don't perform second combine if combiner is in 1-cycle mode.
-    gl_FragColor = combine(gl_FragColor, 0);
-    //if (u_useVertexColors)
-    //    gl_FragColor *= v_color;
+    gl_FragColor = vec4(0.0);
+    if (u_use2cycle) {
+        gl_FragColor = combine(gl_FragColor, 0);
+    }
+    gl_FragColor = combine(gl_FragColor, 1);
     if (u_alphaTest > 0 && gl_FragColor.a < 0.0125)
         discard;
 }
@@ -225,7 +233,12 @@ void main() {
     public bind(gl: WebGL2RenderingContext, prog: WebGLProgram) {
         super.bind(gl, prog);
 
-        this.txsLocation = gl.getUniformLocation(prog, "u_txs");
+        this.texture0Location = gl.getUniformLocation(prog, "u_texture0");
+        this.texture1Location = gl.getUniformLocation(prog, "u_texture1");
+        this.txsLocation = new Array(2);
+        this.txsLocation[0] = gl.getUniformLocation(prog, "u_txs[0]");
+        this.txsLocation[1] = gl.getUniformLocation(prog, "u_txs[1]");
+        this.use2cycle = gl.getUniformLocation(prog, "u_use2cycle");
         this.useVertexColorsLocation = gl.getUniformLocation(prog, "u_useVertexColors");
         this.alphaTestLocation = gl.getUniformLocation(prog, "u_alphaTest");
         this.colorCombiners = new Array(2);
