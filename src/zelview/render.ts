@@ -9,6 +9,7 @@ import { fetch } from '../util';
 
 import * as Viewer from '../viewer';
 import ArrayBufferSlice from 'ArrayBufferSlice';
+import { PrimitiveType } from '../gx/gx_enum';
 
 export type RenderFunc = (renderState: RenderState) => void;
 
@@ -44,25 +45,163 @@ void main() {
     }
 }
 
-class CombinerUniforms {
-    public A: WebGLUniformLocation;
-    public B: WebGLUniformLocation;
-    public C: WebGLUniformLocation;
-    public D: WebGLUniformLocation;
+interface Combiner {
+    subA: number;
+    subB: number;
+    mul: number;
+    add: number;
+}
+
+interface F3DEX2ProgramParameters {
+    use2Cycle: boolean;
+    colorCombiners: Array<Combiner>;
+    alphaCombiners: Array<Combiner>;
+}
+
+const F3DEX2_FRAG_BASE = `
+precision mediump float;
+varying vec2 v_uv;
+varying vec4 v_color;
+uniform sampler2D u_texture0;
+uniform sampler2D u_texture1;
+uniform bool u_useVertexColors;
+uniform int u_alphaTest;
+
+vec4 n64Texture2D(sampler2D tex, vec2 texCoord) {
+    vec2 texSize = vec2(textureSize(tex, 0));
+    vec2 offset = fract(texCoord * texSize - 0.5);
+    offset -= step(1.0, offset.x + offset.y);
+    vec4 c0 = texture2D(tex, texCoord - offset / texSize, 0.0);
+    vec4 c1 = texture2D(tex, texCoord - vec2(offset.x - sign(offset.x), offset.y) / texSize, 0.0);
+    vec4 c2 = texture2D(tex, texCoord - vec2(offset.x, offset.y - sign(offset.y)) / texSize, 0.0);
+    return c0 + abs(offset.x) * (c1 - c0) + abs(offset.y) * (c2 - c0);		
+}
+
+void main() {
+    vec4 t0 = n64Texture2D(u_texture0, v_uv);
+    vec4 t1 = n64Texture2D(u_texture1, v_uv);
+
+    vec4 combined = vec4(0.0);
+#if USE_2CYCLE
+    combined.rgb = (CC0_SUBA - CC0_SUBB) * CC0_MUL + CC0_ADD;
+    combined.a = (AC0_SUBA - AC0_SUBB) * AC0_MUL + AC0_ADD;
+#endif
+    combined.rgb = (CC1_SUBA - CC1_SUBB) * CC1_MUL + CC1_ADD;
+    combined.a = (AC1_SUBA - AC1_SUBB) * AC1_MUL + AC1_ADD;
+
+    gl_FragColor = combined;
+
+    if (u_alphaTest > 0 && gl_FragColor.a < 0.0125)
+        discard;
+}
+`;
+
+const CC_SUBA: {[mode: number]: string} = {
+    0: `combined.rgb`, // COMBINED
+    1: `t0.rgb`, // TEXEL0
+    2: `t1.rgb`, // TEXEL1
+    3: `v_color.rgb`, // PRIMITIVE
+    4: `vec3(1.0)`, // SHADE (TODO)
+    5: `vec3(1.0)`, // ENVIRONMENT (TODO)
+    6: `vec3(1.0)`, // 1
+    7: `vec3(0.5)`, // NOISE (TODO)
+};
+
+const CC_SUBB: {[mode: number]: string} = {
+    0: `combined.rgb`, // COMBINED
+    1: `t0.rgb`, // TEXEL0
+    2: `t1.rgb`, // TEXEL1
+    3: `v_color.rgb`, // PRIMITIVE
+    4: `vec3(1.0)`, // SHADE (TODO)
+    5: `vec3(1.0)`, // ENVIRONMENT (TODO)
+    6: `vec3(0.0)`, // CENTER (i.e. key-center) (TODO)
+    7: `vec3(0.5)`, // K4 (TODO)
+};
+
+const CC_MUL: {[mode: number]: string} = {
+    0: `combined.rgb`, // COMBINED
+    1: `t0.rgb`, // TEXEL0
+    2: `t1.rgb`, // TEXEL1
+    3: `v_color.rgb`, // PRIMITIVE
+    4: `vec3(1.0)`, // SHADE (TODO)
+    5: `vec3(1.0)`, // ENVIRONMENT (TODO)
+    6: `vec3(1.0)`, // SCALE (i.e. key-scale) (TODO)
+    7: `combined.aaa`, // COMBINED_ALPHA
+    8: `t0.aaa`, // TEXEL0_ALPHA
+    9: `t1.aaa`, // TEXEL1_ALPHA
+    10: `v_color.aaa`, // PRIMITIVE_ALPHA
+    11: `vec3(1.0)`, // SHADE_ALPHA (TODO)
+    12: `vec3(1.0)`, // ENV_ALPHA (TODO)
+    13: `vec3(1.0)`, // LOD_FRACTION (TODO)
+    14: `vec3(1.0)`, // PRIM_LOD_FRAC (TODO)
+    15: `vec3(0.5)`, // K5 (TODO)
+};
+
+const CC_ADD: {[mode: number]: string} = {
+    0: `combined.rgb`, // COMBINED
+    1: `t0.rgb`, // TEXEL0
+    2: `t1.rgb`, // TEXEL1
+    3: `v_color.rgb`, // PRIMITIVE
+    4: `vec3(1.0)`, // SHADE (TODO)
+    5: `vec3(1.0)`, // ENVIRONMENT (TODO)
+    6: `vec3(1.0)`, // 1
+};
+
+const AC_ADDSUB: {[mode: number]: string} = {
+    0: `combined.a`, // COMBINED
+    1: `t0.a`, // TEXEL0
+    2: `t1.a`, // TEXEL1
+    3: `v_color.a`, // PRIMITIVE
+    4: `1.0`, // SHADE (TODO)
+    5: `1.0`, // ENVIRONMENT (TODO)
+    6: `1.0`, // 1
+};
+
+const AC_MUL: {[mode: number]: string} = {
+    0: `1.0`, // LOD_FRACTION (TODO)
+    1: `t0.a`, // TEXEL0
+    2: `t1.a`, // TEXEL1
+    3: `v_color.a`, // PRIMITIVE
+    4: `1.0`, // SHADE (TODO)
+    5: `1.0`, // ENVIRONMENT (TODO)
+    6: `1.0`, // PRIM_LOD_FRAC (TODO)
+};
+
+function getOrDefault(obj: {[k: number]: any}, key: number, def: any) {
+    const result = obj[key];
+    return (result === undefined) ? def : result;
 }
 
 export class F3DEX2Program extends Program {
     public texture0Location: WebGLUniformLocation;
     public texture1Location: WebGLUniformLocation;
     public txsLocation: Array<WebGLUniformLocation>;
-    public use2cycle: WebGLUniformLocation;
     public useVertexColorsLocation: WebGLUniformLocation;
     public alphaTestLocation: WebGLUniformLocation;
-    public colorCombiners: Array<CombinerUniforms>;
-    public alphaCombiners: Array<CombinerUniforms>;
     static a_Position = 0;
     static a_UV = 1;
     static a_Color = 2;
+
+    constructor(params: F3DEX2ProgramParameters) {
+        super();
+
+        this.frag = `#define USE_2CYCLE ${params.use2Cycle ? 1 : 0}\n`;
+
+        for (let i = 0; i < 2; i++) {
+            this.frag += `
+#define CC${i}_SUBA ${getOrDefault(CC_SUBA, params.colorCombiners[i].subA, 'vec3(0.0)')}
+#define CC${i}_SUBB ${getOrDefault(CC_SUBB, params.colorCombiners[i].subB, 'vec3(0.0)')}
+#define CC${i}_MUL ${getOrDefault(CC_MUL, params.colorCombiners[i].mul, 'vec3(0.0)')}
+#define CC${i}_ADD ${getOrDefault(CC_ADD, params.colorCombiners[i].add, 'vec3(0.0)')}
+#define AC${i}_SUBA ${getOrDefault(AC_ADDSUB, params.alphaCombiners[i].subA, '0.0')}
+#define AC${i}_SUBB ${getOrDefault(AC_ADDSUB, params.alphaCombiners[i].subB, '0.0')}
+#define AC${i}_MUL ${getOrDefault(AC_MUL, params.alphaCombiners[i].mul, '0.0')}
+#define AC${i}_ADD ${getOrDefault(AC_ADDSUB, params.alphaCombiners[i].add, '0.0')}
+`;
+        }
+
+        this.frag += F3DEX2_FRAG_BASE;
+    }
 
     public vert = `
 uniform mat4 u_modelView;
@@ -82,278 +221,8 @@ void main() {
 `;
 
     public frag = `
-precision mediump float;
-varying vec2 v_uv;
-varying vec4 v_color;
-uniform sampler2D u_texture0;
-uniform sampler2D u_texture1;
-uniform bool u_use2cycle;
-uniform bool u_useVertexColors;
-uniform int u_alphaTest;
-struct Combiner {
-    int A;
-    int B;
-    int C;
-    int D;
-};
-uniform Combiner u_colorCombiners[2];
-uniform Combiner u_alphaCombiners[2];
-
-vec4 n64Texture2D(sampler2D tex, vec2 texCoord) {
-    vec2 texSize = vec2(textureSize(tex, 0));
-    vec2 offset = fract(texCoord * texSize - 0.5);
-    offset -= step(1.0, offset.x + offset.y);
-    vec4 c0 = texture2D(tex, texCoord - offset / texSize, 0.0);
-    vec4 c1 = texture2D(tex, texCoord - vec2(offset.x - sign(offset.x), offset.y) / texSize, 0.0);
-    vec4 c2 = texture2D(tex, texCoord - vec2(offset.x, offset.y - sign(offset.y)) / texSize, 0.0);
-    return c0 + abs(offset.x) * (c1 - c0) + abs(offset.y) * (c2 - c0);		
-}
-
-vec3 getSubAColor(vec4 combined, vec4 texel0, vec4 texel1, int mode) {
-    vec3 result = vec3(0.0);
-    switch (mode) {
-    case 0: // COMBINED
-        result = combined.rgb;
-        break;
-    case 1: // TEXEL0
-        result = texel0.rgb;
-        break;
-    case 2: // TEXEL1
-        result = texel1.rgb;
-        break;
-    case 3: // PRIMITIVE
-        result = v_color.rgb; // TODO: Implement u_useVertexColors option
-        break;
-    case 4: // SHADE
-        result = vec3(1.0); // TODO
-        break;
-    case 5: // ENVIRONMENT
-        result = vec3(1.0); // TODO
-        break;
-    case 6: // 1
-        result = vec3(1.0);
-        break;
-    case 7: // NOISE
-        result = vec3(0.5); // TODO
-        break;
-    default:
-        result = vec3(0.0);
-        break;
-    }
-    return result;
-}
-
-vec3 getSubBColor(vec4 combined, vec4 texel0, vec4 texel1, int mode) {
-    vec3 result = vec3(0.0);
-    switch (mode) {
-    case 0: // COMBINED
-        result = combined.rgb;
-        break;
-    case 1: // TEXEL0
-        result = texel0.rgb;
-        break;
-    case 2: // TEXEL1
-        result = texel1.rgb;
-        break;
-    case 3: // PRIMITIVE
-        result = v_color.rgb; // TODO: Implement u_useVertexColors option
-        break;
-    case 4: // SHADE
-        result = vec3(1.0); // TODO
-        break;
-    case 5: // ENVIRONMENT
-        result = vec3(1.0); // TODO
-        break;
-    case 6: // CENTER
-        result = vec3(0.0); // TODO
-        break;
-    case 7: // K4
-        result = vec3(0.5); // TODO
-        break;
-    default:
-        result = vec3(0.0);
-        break;
-    }
-    return result;
-}
-
-vec3 getMulColor(vec4 combined, vec4 texel0, vec4 texel1, int mode) {
-    vec3 result = vec3(0.0);
-    switch (mode) {
-    case 0: // COMBINED
-        result = combined.rgb;
-        break;
-    case 1: // TEXEL0
-        result = texel0.rgb;
-        break;
-    case 2: // TEXEL1
-        result = texel1.rgb;
-        break;
-    case 3: // PRIMITIVE
-        result = v_color.rgb; // TODO: Implement u_useVertexColors option
-        break;
-    case 4: // SHADE
-        result = vec3(1.0); // TODO
-        break;
-    case 5: // ENVIRONMENT
-        result = vec3(1.0); // TODO
-        break;
-    case 6: // SCALE
-        result = vec3(1.0); // TODO
-        break;
-    case 7: // COMBINED_ALPHA
-        result = combined.aaa;
-        break;
-    case 8: // TEXEL0_ALPHA
-        result = texel0.aaa;
-        break;
-    case 9: // TEXEL1_ALPHA
-        result = texel1.aaa;
-        break;
-    case 10: // PRIMITIVE_ALPHA
-        result = v_color.aaa; // TODO: Implement u_useVertexColors option
-        break;
-    case 11: // SHADE_ALPHA
-        result = vec3(1.0); // TODO
-        break;
-    case 12: // ENV_ALPHA
-        result = vec3(1.0); // TODO
-        break;
-    case 13: // LOD_FRACTION
-        result = vec3(1.0); // TODO
-        break;
-    case 14: // PRIM_LOD_FRAC
-        result = vec3(1.0); // TODO
-        break;
-    case 15: // K5
-        result = vec3(0.5); // TODO
-        break;
-    default:
-        result = vec3(0.0);
-        break;
-    }
-    return result;
-}
-
-vec3 getAddColor(vec4 combined, vec4 texel0, vec4 texel1, int mode) {
-    vec3 result = vec3(0.0);
-    switch (mode) {
-    case 0: // COMBINED
-        result = combined.rgb;
-        break;
-    case 1: // TEXEL0
-        result = texel0.rgb;
-        break;
-    case 2: // TEXEL1
-        result = texel1.rgb;
-        break;
-    case 3: // PRIMITIVE
-        result = v_color.rgb; // TODO: implement u_useVertexColors option
-        break;
-    case 4: // SHADE
-        result = vec3(1.0); // TODO
-        break;
-    case 5: // ENVIRONMENT
-        result = vec3(1.0); // TODO
-        break;
-    case 6: // 1
-        result = vec3(1.0);
-        break;
-    default:
-        result = vec3(0.0);
-        break;
-    }
-    return result;
-}
-
-float getMulAlpha(vec4 combined, vec4 texel0, vec4 texel1, int mode) {
-    float result = 0.0;
-    switch (mode) {
-    case 0: // LOD_FRACTION
-        result = 1.0; // TODO
-        break;
-    case 1: // TEXEL0
-        result = texel0.a;
-        break;
-    case 2: // TEXEL1
-        result = texel1.a;
-        break;
-    case 3: // PRIMITIVE
-        result = v_color.a; // TODO: Implement u_useVertexColors option
-        break;
-    case 4: // SHADE
-        result = 1.0; // TODO
-        break;
-    case 5: // ENVIRONMENT
-        result = 1.0; // TODO
-        break;
-    case 6: // PRIM_LOD_FRAC
-        result = 1.0; // TODO
-        break;
-    default:
-        result = 0.0;
-        break;
-    }
-    return result;
-}
-
-float getAddSubAlpha(vec4 combined, vec4 texel0, vec4 texel1, int mode) {
-    float result = 0.0;
-    switch (mode) {
-    case 0: // COMBINED
-        result = combined.a;
-        break;
-    case 1: // TEXEL0
-        result = texel0.a;
-        break;
-    case 2: // TEXEL1
-        result = texel1.a;
-        break;
-    case 3: // PRIMITIVE
-        result = v_color.a; // TODO: Implement u_useVertexColor option
-        break;
-    case 4: // SHADE
-        result = 1.0; // TODO
-        break;
-    case 5: // ENVIRONMENT
-        result = 1.0; // TODO
-        break;
-    case 6: // 1
-        result = 1.0;
-        break;
-    default:
-        result = 0.0;
-        break;
-    }
-    return result;
-}
-
-vec4 combine(vec4 combined, vec4 texel0, vec4 texel1, int combiner) {
-    vec3 cA = getSubAColor(combined, texel0, texel1, u_colorCombiners[combiner].A);
-    vec3 cB = getSubBColor(combined, texel0, texel1, u_colorCombiners[combiner].B);
-    vec3 cC = getMulColor(combined, texel0, texel1, u_colorCombiners[combiner].C);
-    vec3 cD = getAddColor(combined, texel0, texel1, u_colorCombiners[combiner].D);
-    vec3 c = (cA - cB) * cC + cD;
-    float aA = getAddSubAlpha(combined, texel0, texel1, u_alphaCombiners[combiner].A);
-    float aB = getAddSubAlpha(combined, texel0, texel1, u_alphaCombiners[combiner].B);
-    float aC = getMulAlpha(combined, texel0, texel1, u_alphaCombiners[combiner].C);
-    float aD = getAddSubAlpha(combined, texel0, texel1, u_alphaCombiners[combiner].D);
-    float a = (aA - aB) * aC + aD;
-    return vec4(c, a);
-}
-
-void main() {
-    vec4 texel0 = n64Texture2D(u_texture0, v_uv);
-    vec4 texel1 = n64Texture2D(u_texture1, v_uv);
-    gl_FragColor = vec4(0.0);
-    if (u_use2cycle) {
-        gl_FragColor = combine(gl_FragColor, texel0, texel1, 0);
-    }
-    gl_FragColor = combine(gl_FragColor, texel0, texel1, 1);
-    if (u_alphaTest > 0 && gl_FragColor.a < 0.0125)
-        discard;
-}
-`;
+#error Shader was not properly constructed.
+`
 
     public bind(gl: WebGL2RenderingContext, prog: WebGLProgram) {
         super.bind(gl, prog);
@@ -363,26 +232,8 @@ void main() {
         this.txsLocation = new Array(2);
         this.txsLocation[0] = gl.getUniformLocation(prog, "u_txs[0]");
         this.txsLocation[1] = gl.getUniformLocation(prog, "u_txs[1]");
-        this.use2cycle = gl.getUniformLocation(prog, "u_use2cycle");
         this.useVertexColorsLocation = gl.getUniformLocation(prog, "u_useVertexColors");
         this.alphaTestLocation = gl.getUniformLocation(prog, "u_alphaTest");
-        this.colorCombiners = new Array(2);
-        this.alphaCombiners = new Array(2);
-        for (let i = 0; i < 2; i++) {
-            this.colorCombiners[i] = {
-                A: gl.getUniformLocation(prog, `u_colorCombiners[${i}].A`),
-                B: gl.getUniformLocation(prog, `u_colorCombiners[${i}].B`),
-                C: gl.getUniformLocation(prog, `u_colorCombiners[${i}].C`),
-                D: gl.getUniformLocation(prog, `u_colorCombiners[${i}].D`),
-            };
-            this.alphaCombiners[i] = {
-                A: gl.getUniformLocation(prog, `u_alphaCombiners[${i}].A`),
-                B: gl.getUniformLocation(prog, `u_alphaCombiners[${i}].B`),
-                C: gl.getUniformLocation(prog, `u_alphaCombiners[${i}].C`),
-                D: gl.getUniformLocation(prog, `u_alphaCombiners[${i}].D`),
-            };
-            
-        }
     }
 }
 
@@ -439,12 +290,21 @@ void main() {
     }
 }
 
+function hashF3DEX2Params(params: F3DEX2ProgramParameters): string {
+    return JSON.stringify(params); // TODO: use a more efficient hash mechanism
+}
+
+// F3DEX2-specific data stored in RenderState.
+export interface F3DEX2UserState {
+    progParams: F3DEX2ProgramParameters;
+}
+
 class Scene implements Viewer.MainScene {
     public textures: Viewer.Texture[];
     public zelview0: ZELVIEW0.ZELVIEW0;
     public program_BG: BillboardBGProgram;
     public program_COLL: CollisionProgram;
-    public program_DL: F3DEX2Program;
+    public programMap_DL: {[hash: string]: F3DEX2Program};
     public program_WATERS: WaterboxProgram;
 
     public render: RenderFunc;
@@ -454,7 +314,7 @@ class Scene implements Viewer.MainScene {
         this.textures = [];
         this.program_BG = new BillboardBGProgram();
         this.program_COLL = new CollisionProgram();
-        this.program_DL = new F3DEX2Program();
+        this.programMap_DL = {};
         this.program_WATERS = new WaterboxProgram();
 
         const mainScene = zelview0.loadMainScene(gl);
@@ -472,6 +332,14 @@ class Scene implements Viewer.MainScene {
         };
     }
 
+    private getDLProgram(params: F3DEX2ProgramParameters): F3DEX2Program {
+        const hash = hashF3DEX2Params(params);
+        if (!(hash in this.programMap_DL)) {
+            this.programMap_DL[hash] = new F3DEX2Program(params);
+        }
+        return this.programMap_DL[hash];
+    }
+
     private translateScene(gl: WebGL2RenderingContext, scene: ZELVIEW0.Headers): (state: RenderState) => void {
         return (state: RenderState) => {
             const gl = state.gl;
@@ -487,7 +355,9 @@ class Scene implements Viewer.MainScene {
                     mesh.bg(state);
                 }
 
-                state.useProgram(this.program_DL);
+                const userState = <F3DEX2UserState> state.userState;
+                // TODO: Don't call getDLProgram if state didn't change; it could be expensive.
+                state.useProgram(this.getDLProgram(userState.progParams));
                 state.bindModelView();
                 mesh.opaque.forEach(renderDL);
                 mesh.transparent.forEach(renderDL);
@@ -497,7 +367,22 @@ class Scene implements Viewer.MainScene {
                 renderMesh(room.mesh);
             };
 
-            state.useProgram(this.program_DL);
+            // Initialize with default program parameters
+            const userState: F3DEX2UserState = {
+                progParams: {
+                    use2Cycle: true,
+                    colorCombiners: [
+                        {subA: 0, subB: 0, mul: 0, add: 0},
+                        {subA: 0, subB: 0, mul: 0, add: 0},
+                    ],
+                    alphaCombiners: [
+                        {subA: 0, subB: 0, mul: 0, add: 0},
+                        {subA: 0, subB: 0, mul: 0, add: 0},
+                    ],
+                }
+            };
+            state.userState = userState;
+            
             scene.rooms.forEach((room) => renderRoom(room));
         };
     }

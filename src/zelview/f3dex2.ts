@@ -351,9 +351,8 @@ function cmd_SETOTHERMODE_H(state: State, w0: number, w1: number) {
     flushDraw(state);
     state.cmds.push((renderState: RenderState) => {
         const gl = renderState.gl;
-        const prog = (<Render.F3DEX2Program> renderState.currentProgram);
-        // FIXME: correctly set 2-cycle mode
-        gl.uniform1i(prog.use2cycle, 1);
+        const userState = <Render.F3DEX2UserState> renderState.userState;
+        userState.progParams.use2Cycle = true; // TODO: set correctly
     });
 }
 
@@ -462,27 +461,15 @@ function cmd_SETCOMBINE(state: State, w0: number, w1: number) {
     flushDraw(state);
     state.cmds.push((renderState: RenderState) => {
         const gl = renderState.gl;
-        const prog = (<Render.F3DEX2Program> renderState.currentProgram);
-        
-        gl.uniform1i(prog.colorCombiners[0].A, params.saRGB0);
-        gl.uniform1i(prog.colorCombiners[0].B, params.sbRGB0);
-        gl.uniform1i(prog.colorCombiners[0].C, params.mRGB0);
-        gl.uniform1i(prog.colorCombiners[0].D, params.aRGB0);
-
-        gl.uniform1i(prog.colorCombiners[1].A, params.saRGB1);
-        gl.uniform1i(prog.colorCombiners[1].B, params.sbRGB1);
-        gl.uniform1i(prog.colorCombiners[1].C, params.mRGB1);
-        gl.uniform1i(prog.colorCombiners[1].D, params.aRGB1);
-
-        gl.uniform1i(prog.alphaCombiners[0].A, params.saA0);
-        gl.uniform1i(prog.alphaCombiners[0].B, params.sbA0);
-        gl.uniform1i(prog.alphaCombiners[0].C, params.mA0);
-        gl.uniform1i(prog.alphaCombiners[0].D, params.aA0);
-
-        gl.uniform1i(prog.alphaCombiners[1].A, params.saA1);
-        gl.uniform1i(prog.alphaCombiners[1].B, params.sbA1);
-        gl.uniform1i(prog.alphaCombiners[1].C, params.mA1);
-        gl.uniform1i(prog.alphaCombiners[1].D, params.aA1);
+        const userState = <Render.F3DEX2UserState> renderState.userState;
+        userState.progParams.colorCombiners = [
+            {subA: params.saRGB0, subB: params.sbRGB0, mul: params.mRGB0, add: params.aRGB0},
+            {subA: params.saRGB1, subB: params.sbRGB1, mul: params.mRGB1, add: params.aRGB1},
+        ];
+        userState.progParams.alphaCombiners = [
+            {subA: params.saA0, subB: params.sbA0, mul: params.mA0, add: params.aA0},
+            {subA: params.saA1, subB: params.sbA1, mul: params.mA1, add: params.aA1},
+        ];
     });
 }
 
