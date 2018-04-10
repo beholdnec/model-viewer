@@ -121,7 +121,7 @@ class State {
     public palettePixels: Uint8Array;
     public textureImageAddr: number;
     public currentTile: TextureTile;
-    public textureTile: TextureTile;
+    public textureTiles: Array<TextureTile>;
 
     public rom: ZELVIEW0.ZELVIEW0;
     public banks: ZELVIEW0.RomBanks;
@@ -495,7 +495,9 @@ function cmd_SETTIMG(state: State, w0: number, w1: number) {
 }
 
 function cmd_SETTILE(state: State, w0: number, w1: number) {
+    const tileIdx = (w1 >> 24) & 0x7;
     state.currentTile = {
+        tileIdx: tileIdx,
         format: (w0 >> 16) & 0xFF,
         cms: (w1 >> 8) & 0x3,
         cmt: (w1 >> 18) & 0x3,
@@ -957,8 +959,8 @@ function loadTextureBlock(state: State, cmds: number[][]) {
     cmd_SETTIMG(state, cmds[0][0], cmds[0][1]);
     cmd_SETTILE(state, cmds[5][0], cmds[5][1]);
     cmd_SETTILESIZE(state, cmds[6][0], cmds[6][1]);
-    state.textureTile = state.currentTile;
-    const tile = state.textureTile;
+    state.textureTiles[tileIdx] = state.currentTile;
+    const tile = state.textureTiles[tileIdx];
     tile.addr = state.textureImageAddr;
 
     flushDraw(state);
