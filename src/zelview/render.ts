@@ -81,6 +81,11 @@ void main() {
     vec4 t0 = n64Texture2D(u_texture0, v_uv);
     vec4 t1 = n64Texture2D(u_texture1, v_uv);
 
+    vec4 prim = v_color;
+    if (!u_useVertexColors) {
+        prim = vec4(1.0);
+    }
+
     vec4 combined = vec4(0.0);
 #if USE_2CYCLE
     combined.rgb = (CC0_SUBA - CC0_SUBB) * CC0_MUL + CC0_ADD;
@@ -100,7 +105,7 @@ const CC_SUBA: {[mode: number]: string} = {
     0: `combined.rgb`, // COMBINED
     1: `t0.rgb`, // TEXEL0
     2: `t1.rgb`, // TEXEL1
-    3: `v_color.rgb`, // PRIMITIVE
+    3: `prim.rgb`, // PRIMITIVE
     4: `vec3(1.0)`, // SHADE (TODO)
     5: `vec3(1.0)`, // ENVIRONMENT (TODO)
     6: `vec3(1.0)`, // 1
@@ -111,7 +116,7 @@ const CC_SUBB: {[mode: number]: string} = {
     0: `combined.rgb`, // COMBINED
     1: `t0.rgb`, // TEXEL0
     2: `t1.rgb`, // TEXEL1
-    3: `v_color.rgb`, // PRIMITIVE
+    3: `prim.rgb`, // PRIMITIVE
     4: `vec3(1.0)`, // SHADE (TODO)
     5: `vec3(1.0)`, // ENVIRONMENT (TODO)
     6: `vec3(0.0)`, // CENTER (i.e. key-center) (TODO)
@@ -122,14 +127,14 @@ const CC_MUL: {[mode: number]: string} = {
     0: `combined.rgb`, // COMBINED
     1: `t0.rgb`, // TEXEL0
     2: `t1.rgb`, // TEXEL1
-    3: `v_color.rgb`, // PRIMITIVE
+    3: `prim.rgb`, // PRIMITIVE
     4: `vec3(1.0)`, // SHADE (TODO)
     5: `vec3(1.0)`, // ENVIRONMENT (TODO)
     6: `vec3(1.0)`, // SCALE (i.e. key-scale) (TODO)
     7: `combined.aaa`, // COMBINED_ALPHA
     8: `t0.aaa`, // TEXEL0_ALPHA
     9: `t1.aaa`, // TEXEL1_ALPHA
-    10: `v_color.aaa`, // PRIMITIVE_ALPHA
+    10: `prim.aaa`, // PRIMITIVE_ALPHA
     11: `vec3(1.0)`, // SHADE_ALPHA (TODO)
     12: `vec3(1.0)`, // ENV_ALPHA (TODO)
     13: `vec3(1.0)`, // LOD_FRACTION (TODO)
@@ -141,7 +146,7 @@ const CC_ADD: {[mode: number]: string} = {
     0: `combined.rgb`, // COMBINED
     1: `t0.rgb`, // TEXEL0
     2: `t1.rgb`, // TEXEL1
-    3: `v_color.rgb`, // PRIMITIVE
+    3: `prim.rgb`, // PRIMITIVE
     4: `vec3(1.0)`, // SHADE (TODO)
     5: `vec3(1.0)`, // ENVIRONMENT (TODO)
     6: `vec3(1.0)`, // 1
@@ -151,7 +156,7 @@ const AC_ADDSUB: {[mode: number]: string} = {
     0: `combined.a`, // COMBINED
     1: `t0.a`, // TEXEL0
     2: `t1.a`, // TEXEL1
-    3: `v_color.a`, // PRIMITIVE
+    3: `prim.a`, // PRIMITIVE
     4: `1.0`, // SHADE (TODO)
     5: `1.0`, // ENVIRONMENT (TODO)
     6: `1.0`, // 1
@@ -161,7 +166,7 @@ const AC_MUL: {[mode: number]: string} = {
     0: `1.0`, // LOD_FRACTION (TODO)
     1: `t0.a`, // TEXEL0
     2: `t1.a`, // TEXEL1
-    3: `v_color.a`, // PRIMITIVE
+    3: `prim.a`, // PRIMITIVE
     4: `1.0`, // SHADE (TODO)
     5: `1.0`, // ENVIRONMENT (TODO)
     6: `1.0`, // PRIM_LOD_FRAC (TODO)
