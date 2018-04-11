@@ -99,10 +99,10 @@ interface CombineMode {
     sbRGB0: number,
 }
 
-const NUM_TEXTURE_TILES = 2;
-
+let loggedprogparams = 0;
 class State {
     public gl: WebGL2RenderingContext;
+    public programMap: {[hash: string]: Render.F3DEX2Program} = {};
 
     public cmds: CmdFunc[];
     public textures: Viewer.Texture[];
@@ -114,14 +114,15 @@ class State {
     public vertexData: number[];
     public vertexOffs: number;
 
-    public geometryMode: number;
+    public geometryMode: number = 0;
     public combineMode: CombineMode;
-    public otherModeL: number;
-    public otherModeH: number;
+    public otherModeL: number = 0;
+    public otherModeH: number = (CYCLETYPE._2CYCLE << OtherModeH.CYCLETYPE_SFT);
+    public tex0TileNum: number = 0;
+    public tex1TileNum: number = 1;
 
     public palettePixels: Uint8Array;
     public textureImageAddr: number;
-    public currentTile: TextureTile;
     public textureTiles: Array<TextureTile>;
 
     public rom: ZELVIEW0.ZELVIEW0;
@@ -130,12 +131,88 @@ class State {
     public lookupAddress(addr: number) {
         return this.rom.lookupAddress(this.banks, addr);
     }
+
+    public getDLProgram(params: Render.F3DEX2ProgramParameters): Render.F3DEX2Program {
+        const hash = Render.hashF3DEX2Params(params);
+        if (!(hash in this.programMap)) {
+            this.programMap[hash] = new Render.F3DEX2Program(params);
+        }
+        return this.programMap[hash];
+    }
+
+    public pushUseProgramCmds() {
+        // Clone all relevant fields to prevent the closure from seeing different data than intended.
+        // FIXME: is there a better way to do this?
+        const geometryMode = this.geometryMode;
+        const combineMode = Object.freeze(Object.assign({}, this.combineMode));
+        const otherModeL = this.otherModeL;
+        const otherModeH = this.otherModeH;
+        const tex0Tile = Object.freeze(Object.assign({}, this.textureTiles[this.tex0TileNum]));
+        const tex1Tile = Object.freeze(Object.assign({}, this.textureTiles[this.tex1TileNum]));
+
+        const progParams: Render.F3DEX2ProgramParameters = Object.freeze({
+            use2Cycle: (bitfieldExtract(otherModeH, OtherModeH.CYCLETYPE_SFT, OtherModeH.CYCLETYPE_LEN) == CYCLETYPE._2CYCLE),
+            colorCombiners: [
+                {subA: combineMode.saRGB0, subB: combineMode.sbRGB0, mul: combineMode.mRGB0, add: combineMode.aRGB0},
+                {subA: combineMode.saRGB1, subB: combineMode.sbRGB1, mul: combineMode.mRGB1, add: combineMode.aRGB1},
+            ],
+            alphaCombiners: [
+                {subA: combineMode.saA0, subB: combineMode.sbA0, mul: combineMode.mA0, add: combineMode.aA0},
+                {subA: combineMode.saA1, subB: combineMode.sbA1, mul: combineMode.mA1, add: combineMode.aA1},
+            ],
+        });
+        if (loggedprogparams < 32) {
+            console.log(`Program parameters: ${JSON.stringify(progParams, null, '\t')}`);
+            loggedprogparams++;
+        }
+        // TODO: Don't call getDLProgram if state didn't change; it could be expensive.
+        const prog = this.getDLProgram(progParams);
+
+        let alphaTestMode: number;
+        if (otherModeL & OtherModeL.FORCE_BL) {
+            alphaTestMode = 0;
+        } else {
+            alphaTestMode = ((otherModeL & OtherModeL.CVG_X_ALPHA) ? 0x1 : 0 |
+                                (otherModeL & OtherModeL.ALPHA_CVG_SEL) ? 0x2 : 0);
+        }
+
+        this.cmds.push((renderState: RenderState) => {
+            const gl = renderState.gl;
+
+            renderState.useProgram(prog);
+            renderState.bindModelView();
+
+            gl.uniform1i(prog.texture0Location, 0);
+            gl.uniform1i(prog.texture1Location, 1);
+
+            if (tex0Tile) {
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, tex0Tile.glTextureId);
+                gl.uniform2fv(prog.txsLocation[0], [1 / tex0Tile.width, 1 / tex0Tile.height]);
+            }
+
+            if (tex1Tile) {
+                gl.activeTexture(gl.TEXTURE1);
+                gl.bindTexture(gl.TEXTURE_2D, tex1Tile.glTextureId);
+                gl.uniform2fv(prog.txsLocation[1], [1 / tex1Tile.width, 1 / tex1Tile.height]);
+            }
+
+            gl.activeTexture(gl.TEXTURE0);
+            
+            const lighting = geometryMode & GeometryMode.LIGHTING;
+            //const useVertexColors = lighting ? 0 : 1;
+            // TODO: implement lighting
+            const useVertexColors = 1;
+            gl.uniform1i(prog.useVertexColorsLocation, useVertexColors);
+
+            gl.uniform1i(prog.alphaTestLocation, alphaTestMode);
+        });
+    }
 }
 
 type TextureDestFormat = "i8" | "i8_a8" | "rgba8";
 
 interface TextureTile {
-    tileIdx: number;
     width: number;
     height: number;
     pixels: Uint8Array;
@@ -204,6 +281,7 @@ function flushDraw(state: State) {
     if (vtxCount === 0)
         return;
 
+    state.pushUseProgramCmds();
     state.cmds.push((renderState: RenderState) => {
         const gl = renderState.gl;
         gl.drawArrays(gl.TRIANGLES, vtxOffs, vtxCount);
@@ -253,6 +331,8 @@ const GeometryMode = {
 };
 
 function cmd_GEOMETRYMODE(state: State, w0: number, w1: number) {
+    flushDraw(state);
+
     state.geometryMode = state.geometryMode & ((~w0) & 0x00FFFFFF) | w1;
     const newMode = state.geometryMode;
 
@@ -270,16 +350,8 @@ function cmd_GEOMETRYMODE(state: State, w0: number, w1: number) {
     else
         renderFlags.cullMode = CullMode.NONE;
 
-    flushDraw(state);
     state.cmds.push((renderState: RenderState) => {
-        const gl = renderState.gl;
-        const prog = (<Render.F3DEX2Program> renderState.currentProgram);
-
         renderState.useFlags(renderFlags);
-
-        const lighting = newMode & GeometryMode.LIGHTING;
-        const useVertexColors = lighting ? 0 : 1;
-        gl.uniform1i(prog.useVertexColorsLocation, useVertexColors);
     });
 }
 
@@ -294,67 +366,75 @@ const OtherModeL = {
 
 let loggedsoml = 0;
 function cmd_SETOTHERMODE_L(state: State, w0: number, w1: number) {
-    const shift = bitfieldExtract(w0, 8, 8);
-    const len = bitfieldExtract(w0, 0, 8);
+    flushDraw(state);
+
+    const len = bitfieldExtract(w0, 0, 8) + 1;
+    const sft = Math.max(0, 32 - bitfieldExtract(w0, 8, 8) - len);
+    const mask = ((1 << len) - 1) << sft;
 
     if (loggedsoml < 32) {
-        console.log(`SETOTHERMODE_L shift ${shift} len ${len} data 0x${w1.toString(16)}`);
+        console.log(`SETOTHERMODE_L shift ${sft} len ${len} data 0x${w1.toString(16)}`);
         loggedsoml++;
     }
 
-    const mode = 31 - (w0 & 0xFF);
-    if (mode === 3) {
-        const renderFlags = new RenderFlags();
-        const newMode = w1;
+    state.otherModeL = (state.otherModeL & ~mask) | (w1 & mask);
 
-        renderFlags.depthTest = !!(newMode & OtherModeL.Z_CMP);
-        renderFlags.depthWrite = !!(newMode & OtherModeL.Z_UPD);
+    const renderFlags = new RenderFlags();
+    const newMode = state.otherModeL;
 
-        let alphaTestMode: number;
-        if (newMode & OtherModeL.FORCE_BL) {
-            alphaTestMode = 0;
-            renderFlags.blendMode = BlendMode.ADD;
-        } else {
-            alphaTestMode = ((newMode & OtherModeL.CVG_X_ALPHA) ? 0x1 : 0 |
-                             (newMode & OtherModeL.ALPHA_CVG_SEL) ? 0x2 : 0);
-            renderFlags.blendMode = BlendMode.NONE;
-        }
+    renderFlags.depthTest = !!(newMode & OtherModeL.Z_CMP);
+    renderFlags.depthWrite = !!(newMode & OtherModeL.Z_UPD);
 
-        flushDraw(state);
-        state.cmds.push((renderState: RenderState) => {
-            const gl = renderState.gl;
-            const prog = (<Render.F3DEX2Program> renderState.currentProgram);
-
-            renderState.useFlags(renderFlags);
-
-            if (newMode & OtherModeL.ZMODE_DEC) {
-                gl.enable(gl.POLYGON_OFFSET_FILL);
-                gl.polygonOffset(-0.5, -0.5);
-            } else {
-                gl.disable(gl.POLYGON_OFFSET_FILL);
-            }
-
-            gl.uniform1i(prog.alphaTestLocation, alphaTestMode);
-        });
+    let alphaTestMode: number;
+    if (newMode & OtherModeL.FORCE_BL) {
+        alphaTestMode = 0;
+        renderFlags.blendMode = BlendMode.ADD;
+    } else {
+        alphaTestMode = ((newMode & OtherModeL.CVG_X_ALPHA) ? 0x1 : 0 |
+                            (newMode & OtherModeL.ALPHA_CVG_SEL) ? 0x2 : 0);
+        renderFlags.blendMode = BlendMode.NONE;
     }
+
+    state.cmds.push((renderState: RenderState) => {
+        const gl = renderState.gl;
+        
+        renderState.useFlags(renderFlags);
+
+        if (newMode & OtherModeL.ZMODE_DEC) {
+            gl.enable(gl.POLYGON_OFFSET_FILL);
+            gl.polygonOffset(-0.5, -0.5);
+        } else {
+            gl.disable(gl.POLYGON_OFFSET_FILL);
+        }
+    });
+}
+
+const OtherModeH = {
+    CYCLETYPE_SFT: 20,
+    CYCLETYPE_LEN: 2,
+};
+
+const CYCLETYPE = {
+    _1CYCLE: 0,
+    _2CYCLE: 1,
+    COPY: 2,
+    FILL: 3,
 }
 
 let loggedsomh = 0;
 function cmd_SETOTHERMODE_H(state: State, w0: number, w1: number) {
-    const shift = bitfieldExtract(w0, 8, 8);
-    const len = bitfieldExtract(w0, 0, 8);
+    flushDraw(state);
+
+    const len = bitfieldExtract(w0, 0, 8) + 1;
+    const sft = Math.max(0, 32 - bitfieldExtract(w0, 8, 8) - len);
+    const mask = ((1 << len) - 1) << sft;
 
     if (loggedsomh < 32) {
-        console.log(`SETOTHERMODE_H shift ${shift} len ${len} data ${w1}`);
+        console.log(`SETOTHERMODE_H shift ${sft} len ${len} data 0x${w1.toString(16)}`);
         loggedsomh++;
     }
 
-    flushDraw(state);
-    state.cmds.push((renderState: RenderState) => {
-        const gl = renderState.gl;
-        const userState = <Render.F3DEX2UserState> renderState.userState;
-        userState.progParams.use2Cycle = true; // TODO: set correctly
-    });
+    state.otherModeH = (state.otherModeH & ~mask) | (w1 & mask);
 }
 
 function cmd_DL(state: State, w0: number, w1: number) {
@@ -362,11 +442,10 @@ function cmd_DL(state: State, w0: number, w1: number) {
 }
 
 function cmd_MTX(state: State, w0: number, w1: number) {
+    flushDraw(state);
+
     if (w1 & 0x80000000) state.mtx = state.mtxStack.pop();
     w1 &= ~0x80000000;
-
-    state.geometryMode = 0;
-    state.otherModeL = 0;
 
     state.mtxStack.push(state.mtx);
     state.mtx = mat4.clone(state.mtx);
@@ -389,22 +468,30 @@ function cmd_MTX(state: State, w0: number, w1: number) {
 }
 
 function cmd_POPMTX(state: State, w0: number, w1: number) {
+    flushDraw(state);
+
     state.mtx = state.mtxStack.pop();
 }
 
+let loggedtexture = 0;
 function cmd_TEXTURE(state: State, w0: number, w1: number) {
-    // XXX(jstpierre): Bring this back at some point.
+    flushDraw(state);
 
-    /*
-    const boundTexture = {};
-    state.boundTexture = boundTexture;
+    const params = {
+        scaleS: (bitfieldExtract(w1, 16, 16) + 1) / 65536.0, // FIXME: correct?
+        scaleT: (bitfieldExtract(w1, 0, 16) + 1) / 65536.0, // FIXME: correct?
+        level: bitfieldExtract(w0, 11, 3),
+        tile: bitfieldExtract(w0, 8, 3),
+        on: bitfieldExtract(w0, 1, 7),
+    };
 
-    const s = w1 >> 16;
-    const t = w1 & 0x0000FFFF;
+    if (loggedtexture < 32) {
+        console.log(`TEXTURE ${JSON.stringify(params, null, '\t')}`);
+        loggedtexture++;
+    }
 
-    state.boundTexture.scaleS = (s + 1) / 0x10000;
-    state.boundTexture.scaleT = (t + 1) / 0x10000;
-    */
+    state.tex0TileNum = params.tile;
+    state.tex1TileNum = (params.tile + 1) & 0x7;
 }
 
 function r5g5b5a1(dst: Uint8Array, dstOffs: number, p: number) {
@@ -433,7 +520,9 @@ function bitfieldExtract(value: number, offset: number, bits: number) {
 
 let numCombinesLogged = 0;
 function cmd_SETCOMBINE(state: State, w0: number, w1: number) {
-    const params: CombineMode = {
+    flushDraw(state);
+
+    const params: CombineMode = Object.freeze({
         // w0
         mRGB1: bitfieldExtract(w0, 0, 5),
         saRGB1: bitfieldExtract(w0, 5, 4),
@@ -452,26 +541,13 @@ function cmd_SETCOMBINE(state: State, w0: number, w1: number) {
         saA1: bitfieldExtract(w1, 21, 3),
         sbRGB1: bitfieldExtract(w1, 24, 4),
         sbRGB0: bitfieldExtract(w1, 28, 4),
-    };
+    });
     if (numCombinesLogged < 16) {
         console.log(`SETCOMBINE ${JSON.stringify(params, null, '\t')}`);
         numCombinesLogged++;
     }
+
     state.combineMode = params;
-    
-    flushDraw(state);
-    state.cmds.push((renderState: RenderState) => {
-        const gl = renderState.gl;
-        const userState = <Render.F3DEX2UserState> renderState.userState;
-        userState.progParams.colorCombiners = [
-            {subA: params.saRGB0, subB: params.sbRGB0, mul: params.mRGB0, add: params.aRGB0},
-            {subA: params.saRGB1, subB: params.sbRGB1, mul: params.mRGB1, add: params.aRGB1},
-        ];
-        userState.progParams.alphaCombiners = [
-            {subA: params.saA0, subB: params.sbA0, mul: params.mA0, add: params.aA0},
-            {subA: params.saA1, subB: params.sbA1, mul: params.mA1, add: params.aA1},
-        ];
-    });
 }
 
 function cmd_SETTIMG(state: State, w0: number, w1: number) {
@@ -484,8 +560,7 @@ function cmd_SETTIMG(state: State, w0: number, w1: number) {
 
 function cmd_SETTILE(state: State, w0: number, w1: number) {
     const tileIdx = (w1 >> 24) & 0x7;
-    state.currentTile = {
-        tileIdx: tileIdx,
+    state.textureTiles[tileIdx] = {
         format: (w0 >> 16) & 0xFF,
         cms: (w1 >> 8) & 0x3,
         cmt: (w1 >> 18) & 0x3,
@@ -505,8 +580,7 @@ function cmd_SETTILE(state: State, w0: number, w1: number) {
 
 function cmd_SETTILESIZE(state: State, w0: number, w1: number) {
     const tileIdx = (w1 >> 24) & 0x7;
-    // XXX(jstpierre): Multiple tiles?
-    const tile = state.currentTile;
+    const tile = state.textureTiles[tileIdx];
 
     tile.uls = (w0 >> 14) & 0x3FF;
     tile.ult = (w0 >> 2) & 0x3FF;
@@ -824,7 +898,6 @@ function translateTexture(state: State, texture: TextureTile) {
     }
 
     const texId = gl.createTexture();
-    gl.activeTexture(gl.TEXTURE0 + texture.tileIdx);
     gl.bindTexture(gl.TEXTURE_2D, texId);
     // Filters are set to NEAREST here because filtering is performed in the fragment shader.
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -842,7 +915,6 @@ function translateTexture(state: State, texture: TextureTile) {
 
     gl.texImage2D(gl.TEXTURE_2D, 0, glFormat, texture.width, texture.height, 0, glFormat, gl.UNSIGNED_BYTE, texture.pixels);
     texture.glTextureId = texId;
-    gl.activeTexture(gl.TEXTURE0);
 
     state.textures.push(textureToCanvas(texture));
 }
@@ -937,32 +1009,15 @@ const F3DEX2 = {};
 
 let warned = false;
 function loadTextureBlock(state: State, cmds: number[][]) {
+    flushDraw(state);
+
     const tileIdx = (cmds[5][1] >> 24) & 0x7;
-    if (tileIdx !== 0 && tileIdx !== 1) {
-        warned = true;
-        console.log(`tileIdx ${tileIdx} ignored`);
-        return;
-    }
 
     cmd_SETTIMG(state, cmds[0][0], cmds[0][1]);
     cmd_SETTILE(state, cmds[5][0], cmds[5][1]);
     cmd_SETTILESIZE(state, cmds[6][0], cmds[6][1]);
-    state.textureTiles[tileIdx] = state.currentTile;
     const tile = state.textureTiles[tileIdx];
     tile.addr = state.textureImageAddr;
-
-    flushDraw(state);
-    state.cmds.push((renderState: RenderState) => {
-        const gl = renderState.gl;
-        gl.activeTexture(gl.TEXTURE0 + tileIdx);
-        gl.bindTexture(gl.TEXTURE_2D, tile.glTextureId);
-        gl.activeTexture(gl.TEXTURE0);
-        const prog = (<Render.F3DEX2Program> renderState.currentProgram);
-        // TODO: Set texture uniforms somewhere else?
-        gl.uniform1i(prog.texture0Location, 0);
-        gl.uniform1i(prog.texture1Location, 1);
-        gl.uniform2fv(prog.txsLocation[tileIdx], [1 / tile.width, 1 / tile.height]);
-    });
 }
 
 function runDL(state: State, addr: number) {
@@ -1043,7 +1098,7 @@ export function readDL(gl: WebGL2RenderingContext, rom: ZELVIEW0.ZELVIEW0, banks
     state.vertexData = [];
     state.vertexOffs = 0;
 
-    state.textureTiles = new Array(NUM_TEXTURE_TILES);
+    state.textureTiles = [];
 
     state.rom = rom;
     state.banks = banks;

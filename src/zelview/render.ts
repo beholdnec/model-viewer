@@ -52,7 +52,7 @@ interface Combiner {
     add: number;
 }
 
-interface F3DEX2ProgramParameters {
+export interface F3DEX2ProgramParameters {
     use2Cycle: boolean;
     colorCombiners: Array<Combiner>;
     alphaCombiners: Array<Combiner>;
@@ -295,13 +295,8 @@ void main() {
     }
 }
 
-function hashF3DEX2Params(params: F3DEX2ProgramParameters): string {
+export function hashF3DEX2Params(params: F3DEX2ProgramParameters): string {
     return JSON.stringify(params); // TODO: use a more efficient hash mechanism
-}
-
-// F3DEX2-specific data stored in RenderState.
-export interface F3DEX2UserState {
-    progParams: F3DEX2ProgramParameters;
 }
 
 class Scene implements Viewer.MainScene {
@@ -309,7 +304,6 @@ class Scene implements Viewer.MainScene {
     public zelview0: ZELVIEW0.ZELVIEW0;
     public program_BG: BillboardBGProgram;
     public program_COLL: CollisionProgram;
-    public programMap_DL: {[hash: string]: F3DEX2Program};
     public program_WATERS: WaterboxProgram;
 
     public render: RenderFunc;
@@ -319,7 +313,6 @@ class Scene implements Viewer.MainScene {
         this.textures = [];
         this.program_BG = new BillboardBGProgram();
         this.program_COLL = new CollisionProgram();
-        this.programMap_DL = {};
         this.program_WATERS = new WaterboxProgram();
 
         const mainScene = zelview0.loadMainScene(gl);
@@ -337,14 +330,6 @@ class Scene implements Viewer.MainScene {
         };
     }
 
-    private getDLProgram(params: F3DEX2ProgramParameters): F3DEX2Program {
-        const hash = hashF3DEX2Params(params);
-        if (!(hash in this.programMap_DL)) {
-            this.programMap_DL[hash] = new F3DEX2Program(params);
-        }
-        return this.programMap_DL[hash];
-    }
-
     private translateScene(gl: WebGL2RenderingContext, scene: ZELVIEW0.Headers): (state: RenderState) => void {
         return (state: RenderState) => {
             const gl = state.gl;
@@ -354,16 +339,13 @@ class Scene implements Viewer.MainScene {
             };
 
             const renderMesh = (mesh: ZELVIEW0.Mesh) => {
-                if (mesh.bg) {
-                    state.useProgram(this.program_BG);
-                    state.bindModelView();
-                    mesh.bg(state);
-                }
+                // TODO: reenable this stuff
+                // if (mesh.bg) {
+                //     state.useProgram(this.program_BG);
+                //     state.bindModelView();
+                //     mesh.bg(state);
+                // }
 
-                const userState = <F3DEX2UserState> state.userState;
-                // TODO: Don't call getDLProgram if state didn't change; it could be expensive.
-                state.useProgram(this.getDLProgram(userState.progParams));
-                state.bindModelView();
                 mesh.opaque.forEach(renderDL);
                 mesh.transparent.forEach(renderDL);
             };
@@ -371,22 +353,6 @@ class Scene implements Viewer.MainScene {
             const renderRoom = (room: ZELVIEW0.Headers) => {
                 renderMesh(room.mesh);
             };
-
-            // Initialize with default program parameters
-            const userState: F3DEX2UserState = {
-                progParams: {
-                    use2Cycle: true,
-                    colorCombiners: [
-                        {subA: 0, subB: 0, mul: 0, add: 0},
-                        {subA: 0, subB: 0, mul: 0, add: 0},
-                    ],
-                    alphaCombiners: [
-                        {subA: 0, subB: 0, mul: 0, add: 0},
-                        {subA: 0, subB: 0, mul: 0, add: 0},
-                    ],
-                }
-            };
-            state.userState = userState;
             
             scene.rooms.forEach((room) => renderRoom(room));
         };
