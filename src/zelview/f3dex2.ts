@@ -117,6 +117,7 @@ class State {
     public geometryMode: number;
     public combineMode: CombineMode;
     public otherModeL: number;
+    public otherModeH: number;
 
     public palettePixels: Uint8Array;
     public textureImageAddr: number;
@@ -297,7 +298,7 @@ function cmd_SETOTHERMODE_L(state: State, w0: number, w1: number) {
     const len = bitfieldExtract(w0, 0, 8);
 
     if (loggedsoml < 32) {
-        console.log(`SETOTHERMODE_L shift ${shift} len ${len} data ${w1}`);
+        console.log(`SETOTHERMODE_L shift ${shift} len ${len} data 0x${w1.toString(16)}`);
         loggedsoml++;
     }
 
