@@ -1,5 +1,5 @@
 
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4, vec3, vec4 } from 'gl-matrix';
 
 import * as Render from './render';
 import * as ZELVIEW0 from './zelview0';
@@ -31,14 +31,30 @@ const enum UCodeCommands {
     TEXTURE = 0xD7,
     LOADTLUT = 0xF0,
     LOADBLOCK = 0xF3,
+    LOADTILE = 0xF4,
+    SETCIMG = 0xFF,
+    SETZIMG = 0xFE,
+    SETTIMG = 0xFD,
     SETTILESIZE = 0xF2,
     SETTILE = 0xF5,
-    SETPRIMCOLOR = 0xF9,
-    SETENVCOLOR = 0xFB,
-    SETCOMBINE = 0xFC,
-    SETTIMG = 0xFD,
     RDPLOADSYNC = 0xE6,
     RDPPIPESYNC = 0xE7,
+    RDPTILESYNC = 0xE8,
+    RDPFULLSYNC = 0xE9,
+    FILLRECT = 0xF6,
+    TEXRECT = 0xE4,
+    TEXRECTFLIP = 0xE5,
+
+    SETPRIMDEPTH = 0xEE,
+    SETCONVERT = 0xEC,
+    SETFILLCOLOR = 0xF7,
+    SETFOGCOLOR = 0xF8,
+    SETBLENDCOLOR = 0xF9,
+    SETPRIMCOLOR = 0xFA,
+    SETENVCOLOR = 0xFB,
+    SETCOMBINE = 0xFC,
+    SETKEYR = 0xEB,
+    SETKEYGB = 0xEA,
 }
 
 const CCMUX = {
@@ -80,23 +96,23 @@ const ACMUX = {
 
 interface CombineMode {
     // w0
-    mRGB1: number,
-    saRGB1: number,
-    mA0: number,
-    saA0: number,
-    mRGB0: number,
-    saRGB0: number,
+    mRGB1: number;
+    saRGB1: number;
+    mA0: number;
+    saA0: number;
+    mRGB0: number;
+    saRGB0: number;
     // w1
-    aA1: number,
-    sbA1: number,
-    aRGB1: number,
-    aA0: number,
-    sbA0: number,
-    aRGB0: number,
-    mA1: number,
-    saA1: number,
-    sbRGB1: number,
-    sbRGB0: number,
+    aA1: number;
+    sbA1: number;
+    aRGB1: number;
+    aA0: number;
+    sbA0: number;
+    aRGB0: number;
+    mA1: number;
+    saA1: number;
+    sbRGB1: number;
+    sbRGB0: number;
 }
 
 let loggedprogparams = 0;
@@ -114,6 +130,9 @@ class State {
     public vertexData: number[];
     public vertexOffs: number;
 
+    public primColor: vec4 = vec4.clone([1, 1, 1, 1]);
+    public envColor: vec4 = vec4.clone([1, 1, 1, 1]);
+
     public geometryMode: number = 0;
     public combineMode: CombineMode;
     public otherModeL: number = 0;
@@ -123,7 +142,7 @@ class State {
 
     public palettePixels: Uint8Array;
     public textureImageAddr: number;
-    public textureTiles: Array<TextureTile>;
+    public textureTiles: Array<TextureTile> = [];
 
     public rom: ZELVIEW0.ZELVIEW0;
     public banks: ZELVIEW0.RomBanks;
@@ -143,6 +162,8 @@ class State {
     public pushUseProgramCmds() {
         // Clone all relevant fields to prevent the closure from seeing different data than intended.
         // FIXME: is there a better way to do this?
+        const envColor = vec4.clone(this.envColor);
+        const primColor = vec4.clone(this.primColor);
         const geometryMode = this.geometryMode;
         const combineMode = Object.freeze(Object.assign({}, this.combineMode));
         const otherModeL = this.otherModeL;
@@ -184,6 +205,9 @@ class State {
 
             gl.uniform1i(prog.texture0Location, 0);
             gl.uniform1i(prog.texture1Location, 1);
+
+            gl.uniform4fv(prog.envLocation, envColor);
+            gl.uniform4fv(prog.primLocation, primColor);
 
             if (tex0Tile) {
                 gl.activeTexture(gl.TEXTURE0);
@@ -548,6 +572,28 @@ function cmd_SETCOMBINE(state: State, w0: number, w1: number) {
     }
 
     state.combineMode = params;
+}
+
+function cmd_SETENVCOLOR(state: State, w0: number, w1: number) {
+    flushDraw(state);
+
+    state.envColor = vec4.clone([
+        bitfieldExtract(w1, 24, 8) / 255,
+        bitfieldExtract(w1, 16, 8) / 255,
+        bitfieldExtract(w1, 8, 8) / 255,
+        bitfieldExtract(w1, 0, 8) / 255,
+    ]);
+}
+
+function cmd_SETPRIMCOLOR(state: State, w0: number, w1: number) {
+    flushDraw(state);
+
+    state.primColor = vec4.clone([
+        bitfieldExtract(w1, 24, 8) / 255,
+        bitfieldExtract(w1, 16, 8) / 255,
+        bitfieldExtract(w1, 8, 8) / 255,
+        bitfieldExtract(w1, 0, 8) / 255,
+    ]);
 }
 
 function cmd_SETTIMG(state: State, w0: number, w1: number) {
@@ -1001,6 +1047,8 @@ CommandDispatch[UCodeCommands.SETOTHERMODE_H] = cmd_SETOTHERMODE_H;
 CommandDispatch[UCodeCommands.LOADTLUT] = cmd_LOADTLUT;
 CommandDispatch[UCodeCommands.TEXTURE] = cmd_TEXTURE;
 CommandDispatch[UCodeCommands.SETCOMBINE] = cmd_SETCOMBINE;
+CommandDispatch[UCodeCommands.SETENVCOLOR] = cmd_SETENVCOLOR;
+CommandDispatch[UCodeCommands.SETPRIMCOLOR] = cmd_SETPRIMCOLOR;
 CommandDispatch[UCodeCommands.SETTIMG] = cmd_SETTIMG;
 CommandDispatch[UCodeCommands.SETTILE] = cmd_SETTILE;
 CommandDispatch[UCodeCommands.SETTILESIZE] = cmd_SETTILESIZE;
@@ -1114,10 +1162,10 @@ export function readDL(gl: WebGL2RenderingContext, rom: ZELVIEW0.ZELVIEW0, banks
 
     gl.vertexAttribPointer(Render.F3DEX2Program.a_Position, 3, gl.FLOAT, false, VERTEX_BYTES, 0);
     gl.vertexAttribPointer(Render.F3DEX2Program.a_UV, 2, gl.FLOAT, false, VERTEX_BYTES, 3 * Float32Array.BYTES_PER_ELEMENT);
-    gl.vertexAttribPointer(Render.F3DEX2Program.a_Color, 4, gl.FLOAT, false, VERTEX_BYTES, 5 * Float32Array.BYTES_PER_ELEMENT);
+    gl.vertexAttribPointer(Render.F3DEX2Program.a_Shade, 4, gl.FLOAT, false, VERTEX_BYTES, 5 * Float32Array.BYTES_PER_ELEMENT);
     gl.enableVertexAttribArray(Render.F3DEX2Program.a_Position);
     gl.enableVertexAttribArray(Render.F3DEX2Program.a_UV);
-    gl.enableVertexAttribArray(Render.F3DEX2Program.a_Color);
+    gl.enableVertexAttribArray(Render.F3DEX2Program.a_Shade);
 
     gl.bindVertexArray(null);
 

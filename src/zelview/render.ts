@@ -61,7 +61,9 @@ export interface F3DEX2ProgramParameters {
 const F3DEX2_FRAG_BASE = `
 precision mediump float;
 varying vec2 v_uv;
-varying vec4 v_color;
+varying vec4 v_shade;
+uniform vec4 u_env;
+uniform vec4 u_prim;
 uniform sampler2D u_texture0;
 uniform sampler2D u_texture1;
 uniform bool u_useVertexColors;
@@ -81,9 +83,9 @@ void main() {
     vec4 t0 = n64Texture2D(u_texture0, v_uv);
     vec4 t1 = n64Texture2D(u_texture1, v_uv);
 
-    vec4 prim = v_color;
+    vec4 shade = v_shade;
     if (!u_useVertexColors) {
-        prim = vec4(1.0);
+        shade = vec4(1.0);
     }
 
     vec4 combined = vec4(0.0);
@@ -105,9 +107,9 @@ const CC_SUBA: {[mode: number]: string} = {
     0: `combined.rgb`, // COMBINED
     1: `t0.rgb`, // TEXEL0
     2: `t1.rgb`, // TEXEL1
-    3: `prim.rgb`, // PRIMITIVE
-    4: `vec3(1.0)`, // SHADE (TODO)
-    5: `vec3(1.0)`, // ENVIRONMENT (TODO)
+    3: `u_prim.rgb`, // PRIMITIVE
+    4: `shade.rgb`, // SHADE
+    5: `u_env.rgb`, // ENVIRONMENT
     6: `vec3(1.0)`, // 1
     7: `vec3(0.5)`, // NOISE (TODO)
 };
@@ -116,9 +118,9 @@ const CC_SUBB: {[mode: number]: string} = {
     0: `combined.rgb`, // COMBINED
     1: `t0.rgb`, // TEXEL0
     2: `t1.rgb`, // TEXEL1
-    3: `prim.rgb`, // PRIMITIVE
-    4: `vec3(1.0)`, // SHADE (TODO)
-    5: `vec3(1.0)`, // ENVIRONMENT (TODO)
+    3: `u_prim.rgb`, // PRIMITIVE
+    4: `shade.rgb`, // SHADE
+    5: `u_env.rgb`, // ENVIRONMENT
     6: `vec3(0.0)`, // CENTER (i.e. key-center) (TODO)
     7: `vec3(0.5)`, // K4 (TODO)
 };
@@ -127,16 +129,16 @@ const CC_MUL: {[mode: number]: string} = {
     0: `combined.rgb`, // COMBINED
     1: `t0.rgb`, // TEXEL0
     2: `t1.rgb`, // TEXEL1
-    3: `prim.rgb`, // PRIMITIVE
-    4: `vec3(1.0)`, // SHADE (TODO)
-    5: `vec3(1.0)`, // ENVIRONMENT (TODO)
+    3: `u_prim.rgb`, // PRIMITIVE
+    4: `shade.rgb`, // SHADE
+    5: `u_env.rgb`, // ENVIRONMENT
     6: `vec3(1.0)`, // SCALE (i.e. key-scale) (TODO)
     7: `combined.aaa`, // COMBINED_ALPHA
     8: `t0.aaa`, // TEXEL0_ALPHA
     9: `t1.aaa`, // TEXEL1_ALPHA
-    10: `prim.aaa`, // PRIMITIVE_ALPHA
-    11: `vec3(1.0)`, // SHADE_ALPHA (TODO)
-    12: `vec3(1.0)`, // ENV_ALPHA (TODO)
+    10: `u_prim.aaa`, // PRIMITIVE_ALPHA
+    11: `shade.aaa`, // SHADE_ALPHA
+    12: `u_env.aaa`, // ENV_ALPHA
     13: `vec3(1.0)`, // LOD_FRACTION (TODO)
     14: `vec3(1.0)`, // PRIM_LOD_FRAC (TODO)
     15: `vec3(0.5)`, // K5 (TODO)
@@ -146,9 +148,9 @@ const CC_ADD: {[mode: number]: string} = {
     0: `combined.rgb`, // COMBINED
     1: `t0.rgb`, // TEXEL0
     2: `t1.rgb`, // TEXEL1
-    3: `prim.rgb`, // PRIMITIVE
-    4: `vec3(1.0)`, // SHADE (TODO)
-    5: `vec3(1.0)`, // ENVIRONMENT (TODO)
+    3: `u_prim.rgb`, // PRIMITIVE
+    4: `shade.rgb`, // SHADE
+    5: `u_env.rgb`, // ENVIRONMENT
     6: `vec3(1.0)`, // 1
 };
 
@@ -156,9 +158,9 @@ const AC_ADDSUB: {[mode: number]: string} = {
     0: `combined.a`, // COMBINED
     1: `t0.a`, // TEXEL0
     2: `t1.a`, // TEXEL1
-    3: `prim.a`, // PRIMITIVE
-    4: `1.0`, // SHADE (TODO)
-    5: `1.0`, // ENVIRONMENT (TODO)
+    3: `u_prim.a`, // PRIMITIVE
+    4: `shade.a`, // SHADE
+    5: `u_env.a`, // ENVIRONMENT
     6: `1.0`, // 1
 };
 
@@ -166,9 +168,9 @@ const AC_MUL: {[mode: number]: string} = {
     0: `1.0`, // LOD_FRACTION (TODO)
     1: `t0.a`, // TEXEL0
     2: `t1.a`, // TEXEL1
-    3: `prim.a`, // PRIMITIVE
-    4: `1.0`, // SHADE (TODO)
-    5: `1.0`, // ENVIRONMENT (TODO)
+    3: `u_prim.a`, // PRIMITIVE
+    4: `shade.a`, // SHADE
+    5: `u_env.a`, // ENVIRONMENT
     6: `1.0`, // PRIM_LOD_FRAC (TODO)
 };
 
@@ -181,11 +183,13 @@ export class F3DEX2Program extends Program {
     public texture0Location: WebGLUniformLocation;
     public texture1Location: WebGLUniformLocation;
     public txsLocation: Array<WebGLUniformLocation>;
+    public envLocation: WebGLUniformLocation;
+    public primLocation: WebGLUniformLocation;
     public useVertexColorsLocation: WebGLUniformLocation;
     public alphaTestLocation: WebGLUniformLocation;
     static a_Position = 0;
     static a_UV = 1;
-    static a_Color = 2;
+    static a_Shade = 2;
 
     constructor(params: F3DEX2ProgramParameters) {
         super();
@@ -213,15 +217,15 @@ uniform mat4 u_modelView;
 uniform mat4 u_projection;
 layout(location = ${F3DEX2Program.a_Position}) attribute vec3 a_Position;
 layout(location = ${F3DEX2Program.a_UV}) attribute vec2 a_UV;
-layout(location = ${F3DEX2Program.a_Color}) attribute vec4 a_Color;
-out vec4 v_color;
+layout(location = ${F3DEX2Program.a_Shade}) attribute vec4 a_Shade;
+out vec4 v_shade;
 out vec2 v_uv;
 uniform vec2 u_txs[2];
 
 void main() {
     gl_Position = u_projection * u_modelView * vec4(a_Position, 1.0);
     v_uv = a_UV * u_txs[0]; // ??? Is there a second set of texcoords?
-    v_color = a_Color;
+    v_shade = a_Shade;
 }
 `;
 
@@ -234,9 +238,11 @@ void main() {
 
         this.texture0Location = gl.getUniformLocation(prog, "u_texture0");
         this.texture1Location = gl.getUniformLocation(prog, "u_texture1");
-        this.txsLocation = new Array(2);
+        this.txsLocation = [];
         this.txsLocation[0] = gl.getUniformLocation(prog, "u_txs[0]");
         this.txsLocation[1] = gl.getUniformLocation(prog, "u_txs[1]");
+        this.envLocation = gl.getUniformLocation(prog, "u_env");
+        this.primLocation = gl.getUniformLocation(prog, "u_prim");
         this.useVertexColorsLocation = gl.getUniformLocation(prog, "u_useVertexColors");
         this.alphaTestLocation = gl.getUniformLocation(prog, "u_alphaTest");
     }
@@ -339,12 +345,11 @@ class Scene implements Viewer.MainScene {
             };
 
             const renderMesh = (mesh: ZELVIEW0.Mesh) => {
-                // TODO: reenable this stuff
-                // if (mesh.bg) {
-                //     state.useProgram(this.program_BG);
-                //     state.bindModelView();
-                //     mesh.bg(state);
-                // }
+                if (mesh.bg) {
+                    state.useProgram(this.program_BG);
+                    state.bindModelView();
+                    mesh.bg(state);
+                }
 
                 mesh.opaque.forEach(renderDL);
                 mesh.transparent.forEach(renderDL);
