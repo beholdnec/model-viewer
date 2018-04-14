@@ -654,25 +654,25 @@ function loadTile(state: State, texture: TextureTile) {
     const key = tileCacheKey(state, texture);
     const otherTile = tileCache.get(key);
     if (!otherTile) {
-        translateTexture(state, texture);
+        const srcOffs = state.lookupAddress(texture.addr);
+        loadTexture(state.gl, texture, state.rom.view, srcOffs, state.palettePixels);
+        state.textures.push(textureToCanvas(texture));
         tileCache.set(key, texture);
     } else if (texture !== otherTile) {
         texture.glTextureId = otherTile.glTextureId;
     }
 }
 
-function convert_CI4(state: State, texture: TextureTile) {
-    const palette = state.palettePixels;
+function convert_CI4(texture: TextureTile, src: DataView, srcOffs: number, palette: Uint8Array) {
     if (!palette)
         return;
 
     const nBytes = texture.width * texture.height * 4;
     const dst = new Uint8Array(nBytes);
-    let srcOffs = state.lookupAddress(texture.addr);
     let i = 0;
     for (let y = 0; y < texture.height; y++) {
         for (let x = 0; x < texture.width; x += 2) {
-            const b = state.rom.view.getUint8(srcOffs++);
+            const b = src.getUint8(srcOffs++);
             let idx;
 
             idx = ((b & 0xF0) >> 4) * 4;
@@ -692,15 +692,14 @@ function convert_CI4(state: State, texture: TextureTile) {
     texture.pixels = dst;
 }
 
-function convert_I4(state: State, texture: TextureTile) {
+function convert_I4(texture: TextureTile, src: DataView, srcOffs: number) {
     const nBytes = texture.width * texture.height * 2;
     const dst = new Uint8Array(nBytes);
 
-    let srcOffs = state.lookupAddress(texture.addr);
     let i = 0;
     for (let y = 0; y < texture.height; y++) {
         for (let x = 0; x < texture.width; x += 2) {
-            const b = state.rom.view.getUint8(srcOffs++);
+            const b = src.getUint8(srcOffs++);
 
             let p;
             p = (b & 0xF0) >> 4;
@@ -718,15 +717,14 @@ function convert_I4(state: State, texture: TextureTile) {
     texture.pixels = dst;
 }
 
-function convert_IA4(state: State, texture: TextureTile) {
+function convert_IA4(texture: TextureTile, src: DataView, srcOffs: number) {
     const nBytes = texture.width * texture.height * 2;
     const dst = new Uint8Array(nBytes);
 
-    let srcOffs = state.lookupAddress(texture.addr);
     let i = 0;
     for (let y = 0; y < texture.height; y++) {
         for (let x = 0; x < texture.width; x += 2) {
-            const b = state.rom.view.getUint8(srcOffs++);
+            const b = src.getUint8(srcOffs++);
             let p; let pm;
 
             p = (b & 0xF0) >> 4;
@@ -744,19 +742,17 @@ function convert_IA4(state: State, texture: TextureTile) {
     texture.pixels = dst;
 }
 
-function convert_CI8(state: State, texture: TextureTile) {
-    const palette = state.palettePixels;
+function convert_CI8(texture: TextureTile, src: DataView, srcOffs: number, palette: Uint8Array) {
     if (!palette)
         return;
 
     const nBytes = texture.width * texture.height * 4;
     const dst = new Uint8Array(nBytes);
 
-    let srcOffs = state.lookupAddress(texture.addr);
     let i = 0;
     for (let y = 0; y < texture.height; y++) {
         for (let x = 0; x < texture.width; x++) {
-            let idx = state.rom.view.getUint8(srcOffs) * 4;
+            let idx = src.getUint8(srcOffs) * 4;
             dst[i++] = palette[idx++];
             dst[i++] = palette[idx++];
             dst[i++] = palette[idx++];
@@ -768,15 +764,14 @@ function convert_CI8(state: State, texture: TextureTile) {
     texture.pixels = dst;
 }
 
-function convert_I8(state: State, texture: TextureTile) {
+function convert_I8(texture: TextureTile, src: DataView, srcOffs: number) {
     const nBytes = texture.width * texture.height * 2;
     const dst = new Uint8Array(nBytes);
 
-    let srcOffs = state.lookupAddress(texture.addr);
     let i = 0;
     for (let y = 0; y < texture.height; y++) {
         for (let x = 0; x < texture.width; x++) {
-            const p = state.rom.view.getUint8(srcOffs++);
+            const p = src.getUint8(srcOffs++);
             dst[i++] = p;
             dst[i++] = p;
         }
@@ -785,15 +780,14 @@ function convert_I8(state: State, texture: TextureTile) {
     texture.pixels = dst;
 }
 
-function convert_IA8(state: State, texture: TextureTile) {
+function convert_IA8(texture: TextureTile, src: DataView, srcOffs: number) {
     const nBytes = texture.width * texture.height * 2;
     const dst = new Uint8Array(nBytes);
 
-    let srcOffs = state.lookupAddress(texture.addr);
     let i = 0;
     for (let y = 0; y < texture.height; y++) {
         for (let x = 0; x < texture.width; x++) {
-            const b = state.rom.view.getUint8(srcOffs++);
+            const b = src.getUint8(srcOffs++);
             let p;
 
             p = (b & 0xF0) >> 4;
@@ -809,16 +803,14 @@ function convert_IA8(state: State, texture: TextureTile) {
     texture.pixels = dst;
 }
 
-function convert_RGBA16(state: State, texture: TextureTile) {
-    const rom = state.rom;
+function convert_RGBA16(texture: TextureTile, src: DataView, srcOffs: number) {
     const nBytes = texture.width * texture.height * 4;
     const dst = new Uint8Array(nBytes);
 
-    let srcOffs = state.lookupAddress(texture.addr);
     let i = 0;
     for (let y = 0; y < texture.height; y++) {
         for (let x = 0; x < texture.width; x++) {
-            const pixel = rom.view.getUint16(srcOffs, false);
+            const pixel = src.getUint16(srcOffs, false);
             r5g5b5a1(dst, i, pixel);
             i += 4;
             srcOffs += 2;
@@ -828,16 +820,15 @@ function convert_RGBA16(state: State, texture: TextureTile) {
     texture.pixels = dst;
 }
 
-function convert_IA16(state: State, texture: TextureTile) {
+function convert_IA16(texture: TextureTile, src: DataView, srcOffs: number) {
     const nBytes = texture.width * texture.height * 2;
     const dst = new Uint8Array(nBytes);
 
-    let srcOffs = state.lookupAddress(texture.addr);
     let i = 0;
     for (let y = 0; y < texture.height; y++) {
         for (let x = 0; x < texture.width; x++) {
-            dst[i++] = state.rom.view.getUint8(srcOffs++);
-            dst[i++] = state.rom.view.getUint8(srcOffs++);
+            dst[i++] = src.getUint8(srcOffs++);
+            dst[i++] = src.getUint8(srcOffs++);
         }
     }
 
@@ -881,29 +872,26 @@ function textureToCanvas(texture: TextureTile): Viewer.Texture {
     return { name: canvas.title, surfaces };
 }
 
-function translateTexture(state: State, texture: TextureTile) {
-    const gl = state.gl;
-
+function loadTexture(gl: WebGL2RenderingContext, texture: TextureTile, src: DataView, srcOffs: number, palette: Uint8Array) {
     function convertTexturePixels() {
         switch (texture.format) {
         // 4-bit
-        case 0x40: return convert_CI4(state, texture);    // CI
-        case 0x60: return convert_IA4(state, texture);    // IA
-        case 0x80: return convert_I4(state, texture);     // I
+        case 0x40: return convert_CI4(texture, src, srcOffs, palette);    // CI
+        case 0x60: return convert_IA4(texture, src, srcOffs);    // IA
+        case 0x80: return convert_I4(texture, src, srcOffs);     // I
         // 8-bit
-        case 0x48: return convert_CI8(state, texture);    // CI
-        case 0x68: return convert_IA8(state, texture);    // IA
-        case 0x88: return convert_I8(state, texture);     // I
+        case 0x48: return convert_CI8(texture, src, srcOffs, palette);    // CI
+        case 0x68: return convert_IA8(texture, src, srcOffs);    // IA
+        case 0x88: return convert_I8(texture, src, srcOffs);     // I
         // 16-bit
-        case 0x10: return convert_RGBA16(state, texture); // RGBA
-        case 0x70: return convert_IA16(state, texture);   // IA
+        case 0x10: return convert_RGBA16(texture, src, srcOffs); // RGBA
+        case 0x70: return convert_IA16(texture, src, srcOffs);   // IA
         default: console.error("Unsupported texture", texture.format.toString(16));
         }
     }
 
     texture.dstFormat = calcTextureDestFormat(texture);
 
-    const srcOffs = state.lookupAddress(texture.addr);
     if (srcOffs !== null)
         convertTexturePixels();
 
@@ -943,8 +931,6 @@ function translateTexture(state: State, texture: TextureTile) {
 
     gl.texImage2D(gl.TEXTURE_2D, 0, glFormat, texture.width, texture.height, 0, glFormat, gl.UNSIGNED_BYTE, texture.pixels);
     texture.glTextureId = texId;
-
-    state.textures.push(textureToCanvas(texture));
 }
 
 function calcTextureDestFormat(texture: TextureTile): TextureDestFormat {
