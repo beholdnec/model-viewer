@@ -94,27 +94,6 @@ const ACMUX = {
     _0: 7,
 };
 
-interface CombineMode {
-    // w0
-    mRGB1: number;
-    saRGB1: number;
-    mA0: number;
-    saA0: number;
-    mRGB0: number;
-    saRGB0: number;
-    // w1
-    aA1: number;
-    sbA1: number;
-    aRGB1: number;
-    aA0: number;
-    sbA0: number;
-    aRGB0: number;
-    mA1: number;
-    saA1: number;
-    sbRGB1: number;
-    sbRGB0: number;
-}
-
 let loggedprogparams = 0;
 class State {
     public gl: WebGL2RenderingContext;
@@ -134,7 +113,7 @@ class State {
     public envColor: vec4 = vec4.clone([1, 1, 1, 1]);
 
     public geometryMode: number = 0;
-    public combineMode: CombineMode;
+    public combiners: Readonly<Render.Combiners>;
     public otherModeL: number = 0;
     public otherModeH: number = (CYCLETYPE._2CYCLE << OtherModeH.CYCLETYPE_SFT);
     public tex0TileNum: number = 0;
@@ -165,7 +144,6 @@ class State {
         const envColor = vec4.clone(this.envColor);
         const primColor = vec4.clone(this.primColor);
         const geometryMode = this.geometryMode;
-        const combineMode = Object.freeze(Object.assign({}, this.combineMode));
         const otherModeL = this.otherModeL;
         const otherModeH = this.otherModeH;
         const tex0Tile = Object.freeze(Object.assign({}, this.textureTiles[this.tex0TileNum]));
@@ -173,19 +151,14 @@ class State {
 
         const progParams: Render.F3DEX2ProgramParameters = Object.freeze({
             use2Cycle: (bitfieldExtract(otherModeH, OtherModeH.CYCLETYPE_SFT, OtherModeH.CYCLETYPE_LEN) == CYCLETYPE._2CYCLE),
-            colorCombiners: [
-                {subA: combineMode.saRGB0, subB: combineMode.sbRGB0, mul: combineMode.mRGB0, add: combineMode.aRGB0},
-                {subA: combineMode.saRGB1, subB: combineMode.sbRGB1, mul: combineMode.mRGB1, add: combineMode.aRGB1},
-            ],
-            alphaCombiners: [
-                {subA: combineMode.saA0, subB: combineMode.sbA0, mul: combineMode.mA0, add: combineMode.aA0},
-                {subA: combineMode.saA1, subB: combineMode.sbA1, mul: combineMode.mA1, add: combineMode.aA1},
-            ],
+            combiners: this.combiners,
         });
+
         if (loggedprogparams < 32) {
             console.log(`Program parameters: ${JSON.stringify(progParams, null, '\t')}`);
             loggedprogparams++;
         }
+
         // TODO: Don't call getDLProgram if state didn't change; it could be expensive.
         const prog = this.getDLProgram(progParams);
 
@@ -546,32 +519,41 @@ let numCombinesLogged = 0;
 function cmd_SETCOMBINE(state: State, w0: number, w1: number) {
     flushDraw(state);
 
-    const params: CombineMode = Object.freeze({
-        // w0
-        mRGB1: bitfieldExtract(w0, 0, 5),
-        saRGB1: bitfieldExtract(w0, 5, 4),
-        mA0: bitfieldExtract(w0, 9, 3),
-        saA0: bitfieldExtract(w0, 12, 3),
-        mRGB0: bitfieldExtract(w0, 15, 5),
-        saRGB0: bitfieldExtract(w0, 20, 4),
-        // w1
-        aA1: bitfieldExtract(w1, 0, 3),
-        sbA1: bitfieldExtract(w1, 3, 3),
-        aRGB1: bitfieldExtract(w1, 6, 3),
-        aA0: bitfieldExtract(w1, 9, 3),
-        sbA0: bitfieldExtract(w1, 12, 3),
-        aRGB0: bitfieldExtract(w1, 15, 3),
-        mA1: bitfieldExtract(w1, 18, 3),
-        saA1: bitfieldExtract(w1, 21, 3),
-        sbRGB1: bitfieldExtract(w1, 24, 4),
-        sbRGB0: bitfieldExtract(w1, 28, 4),
+    state.combiners = Object.freeze({
+        colorCombiners: Object.freeze([
+            Object.freeze({
+                subA: bitfieldExtract(w0, 20, 4),
+                subB: bitfieldExtract(w1, 28, 4),
+                mul: bitfieldExtract(w0, 15, 5),
+                add: bitfieldExtract(w1, 15, 3),
+            }),
+            Object.freeze({
+                subA: bitfieldExtract(w0, 5, 4),
+                subB: bitfieldExtract(w1, 24, 4),
+                mul: bitfieldExtract(w0, 0, 5),
+                add: bitfieldExtract(w1, 6, 3),
+            }),
+        ]),
+        alphaCombiners: Object.freeze([
+            Object.freeze({
+                subA: bitfieldExtract(w0, 12, 3),
+                subB: bitfieldExtract(w1, 12, 3),
+                mul: bitfieldExtract(w0, 9, 3),
+                add: bitfieldExtract(w1, 9, 3),
+            }),
+            Object.freeze({
+                subA: bitfieldExtract(w1, 21, 3),
+                subB: bitfieldExtract(w1, 3, 3),
+                mul: bitfieldExtract(w1, 18, 3),
+                add: bitfieldExtract(w1, 0, 3),
+            }),
+        ]),
     });
+
     if (numCombinesLogged < 16) {
-        console.log(`SETCOMBINE ${JSON.stringify(params, null, '\t')}`);
+        console.log(`SETCOMBINE ${JSON.stringify(state.combiners, null, '\t')}`);
         numCombinesLogged++;
     }
-
-    state.combineMode = params;
 }
 
 function cmd_SETENVCOLOR(state: State, w0: number, w1: number) {

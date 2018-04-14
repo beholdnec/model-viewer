@@ -52,10 +52,14 @@ interface Combiner {
     add: number;
 }
 
+export interface Combiners {
+    colorCombiners: ReadonlyArray<Readonly<Combiner>>;
+    alphaCombiners: ReadonlyArray<Readonly<Combiner>>;
+}
+
 export interface F3DEX2ProgramParameters {
     use2Cycle: boolean;
-    colorCombiners: Array<Combiner>;
-    alphaCombiners: Array<Combiner>;
+    combiners: Combiners;
 }
 
 const F3DEX2_FRAG_BASE = `
@@ -198,14 +202,14 @@ export class F3DEX2Program extends Program {
 
         for (let i = 0; i < 2; i++) {
             this.frag += `
-#define CC${i}_SUBA ${getOrDefault(CC_SUBA, params.colorCombiners[i].subA, 'vec3(0.0)')}
-#define CC${i}_SUBB ${getOrDefault(CC_SUBB, params.colorCombiners[i].subB, 'vec3(0.0)')}
-#define CC${i}_MUL ${getOrDefault(CC_MUL, params.colorCombiners[i].mul, 'vec3(0.0)')}
-#define CC${i}_ADD ${getOrDefault(CC_ADD, params.colorCombiners[i].add, 'vec3(0.0)')}
-#define AC${i}_SUBA ${getOrDefault(AC_ADDSUB, params.alphaCombiners[i].subA, '0.0')}
-#define AC${i}_SUBB ${getOrDefault(AC_ADDSUB, params.alphaCombiners[i].subB, '0.0')}
-#define AC${i}_MUL ${getOrDefault(AC_MUL, params.alphaCombiners[i].mul, '0.0')}
-#define AC${i}_ADD ${getOrDefault(AC_ADDSUB, params.alphaCombiners[i].add, '0.0')}
+#define CC${i}_SUBA ${getOrDefault(CC_SUBA, params.combiners.colorCombiners[i].subA, 'vec3(0.0)')}
+#define CC${i}_SUBB ${getOrDefault(CC_SUBB, params.combiners.colorCombiners[i].subB, 'vec3(0.0)')}
+#define CC${i}_MUL ${getOrDefault(CC_MUL, params.combiners.colorCombiners[i].mul, 'vec3(0.0)')}
+#define CC${i}_ADD ${getOrDefault(CC_ADD, params.combiners.colorCombiners[i].add, 'vec3(0.0)')}
+#define AC${i}_SUBA ${getOrDefault(AC_ADDSUB, params.combiners.alphaCombiners[i].subA, '0.0')}
+#define AC${i}_SUBB ${getOrDefault(AC_ADDSUB, params.combiners.alphaCombiners[i].subB, '0.0')}
+#define AC${i}_MUL ${getOrDefault(AC_MUL, params.combiners.alphaCombiners[i].mul, '0.0')}
+#define AC${i}_ADD ${getOrDefault(AC_ADDSUB, params.combiners.alphaCombiners[i].add, '0.0')}
 `;
         }
 
