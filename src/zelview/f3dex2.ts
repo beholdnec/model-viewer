@@ -8,6 +8,10 @@ import { CullMode, RenderState, RenderFlags, BlendMode } from '../render';
 import Program from '../program';
 import * as Viewer from '../viewer';
 
+function extractBits(value: number, offset: number, bits: number) {
+    return (value >> offset) & ((1 << bits) - 1);
+}
+
 // Zelda uses the F3DEX2 display list format. This implements
 // a simple (and probably wrong!) HLE renderer for it.
 
@@ -94,6 +98,29 @@ const ACMUX = {
     _0: 7,
 };
 
+interface TImgParams {
+    fmt: number;
+    siz: number;
+    width: number;
+    addr: number;
+}
+
+interface TileParams {
+    fmt: number;
+    siz: number;
+    line: number;
+    tmem: number;
+    palette: number;
+    cmt: number;
+    cms: number;
+    maskt: number;
+    masks: number;
+    shiftt: number;
+    shifts: number;
+}
+
+const TMEM_SIZE = 4096;
+
 let loggedprogparams = 0;
 class State {
     public gl: WebGL2RenderingContext;
@@ -101,6 +128,7 @@ class State {
 
     public cmds: CmdFunc[];
     public textures: Viewer.Texture[];
+    public tmem: Uint8Array = new Uint8Array(TMEM_SIZE);
 
     public mtx: mat4;
     public mtxStack: mat4[];
@@ -120,7 +148,8 @@ class State {
     public tex1TileNum: number = 1;
 
     public palettePixels: Uint8Array;
-    public textureImageAddr: number;
+    public timgParams: Readonly<TImgParams>;
+    public tileParams: Array<Readonly<TileParams>> = [];
     public textureTiles: Array<TextureTile> = [];
 
     public rom: ZELVIEW0.ZELVIEW0;
@@ -146,14 +175,30 @@ class State {
         const geometryMode = this.geometryMode;
         const otherModeL = this.otherModeL;
         const otherModeH = this.otherModeH;
-        const tex0Tile = Object.freeze(Object.assign({}, this.textureTiles[this.tex0TileNum]));
-        const tex1Tile = Object.freeze(Object.assign({}, this.textureTiles[this.tex1TileNum]));
+
+        let glTex0: WebGLTexture = null;
+        let glTex0Dims = [1, 1];
+        if (this.textureTiles[this.tex0TileNum]) {
+            let tile = this.textureTiles[this.tex0TileNum];
+            loadTexture(this.gl, tile, new DataView(this.tmem.buffer), tile.tmem, this.palettePixels);
+            glTex0 = tile.glTextureId;
+            glTex0Dims = [tile.width, tile.height];
+        }
+
+        let glTex1: WebGLTexture = null;
+        let glTex1Dims = [1, 1];
+        if (this.textureTiles[this.tex1TileNum]) {
+            let tile = this.textureTiles[this.tex1TileNum];
+            loadTexture(this.gl, tile, new DataView(this.tmem.buffer), tile.tmem, this.palettePixels);
+            glTex1 = tile.glTextureId;
+            glTex1Dims = [tile.width, tile.height];
+        }
 
         const progParams: Render.F3DEX2ProgramParameters = Object.freeze({
-            use2Cycle: (bitfieldExtract(otherModeH, OtherModeH.CYCLETYPE_SFT, OtherModeH.CYCLETYPE_LEN) == CYCLETYPE._2CYCLE),
+            use2Cycle: (extractBits(otherModeH, OtherModeH.CYCLETYPE_SFT, OtherModeH.CYCLETYPE_LEN) == CYCLETYPE._2CYCLE),
             combiners: this.combiners,
         });
-
+        
         if (loggedprogparams < 32) {
             console.log(`Program parameters: ${JSON.stringify(progParams, null, '\t')}`);
             loggedprogparams++;
@@ -182,17 +227,13 @@ class State {
             gl.uniform4fv(prog.envLocation, envColor);
             gl.uniform4fv(prog.primLocation, primColor);
 
-            if (tex0Tile) {
-                gl.activeTexture(gl.TEXTURE0);
-                gl.bindTexture(gl.TEXTURE_2D, tex0Tile.glTextureId);
-                gl.uniform2fv(prog.txsLocation[0], [1 / tex0Tile.width, 1 / tex0Tile.height]);
-            }
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, glTex0);
+            gl.uniform2fv(prog.txsLocation[0], [1 / glTex0Dims[0], 1 / glTex0Dims[1]]);
 
-            if (tex1Tile) {
-                gl.activeTexture(gl.TEXTURE1);
-                gl.bindTexture(gl.TEXTURE_2D, tex1Tile.glTextureId);
-                gl.uniform2fv(prog.txsLocation[1], [1 / tex1Tile.width, 1 / tex1Tile.height]);
-            }
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, glTex1);
+            gl.uniform2fv(prog.txsLocation[1], [1 / glTex1Dims[0], 1 / glTex1Dims[1]]);
 
             gl.activeTexture(gl.TEXTURE0);
             
@@ -219,6 +260,8 @@ interface TextureTile {
 
     // XXX(jstpierre): Move somewhere else?
     glTextureId: WebGLTexture;
+
+    tmem: number;
 
     // Internal size data.
     lrs: number; lrt: number;
@@ -365,8 +408,8 @@ let loggedsoml = 0;
 function cmd_SETOTHERMODE_L(state: State, w0: number, w1: number) {
     flushDraw(state);
 
-    const len = bitfieldExtract(w0, 0, 8) + 1;
-    const sft = Math.max(0, 32 - bitfieldExtract(w0, 8, 8) - len);
+    const len = extractBits(w0, 0, 8) + 1;
+    const sft = Math.max(0, 32 - extractBits(w0, 8, 8) - len);
     const mask = ((1 << len) - 1) << sft;
 
     if (loggedsoml < 32) {
@@ -422,8 +465,8 @@ let loggedsomh = 0;
 function cmd_SETOTHERMODE_H(state: State, w0: number, w1: number) {
     flushDraw(state);
 
-    const len = bitfieldExtract(w0, 0, 8) + 1;
-    const sft = Math.max(0, 32 - bitfieldExtract(w0, 8, 8) - len);
+    const len = extractBits(w0, 0, 8) + 1;
+    const sft = Math.max(0, 32 - extractBits(w0, 8, 8) - len);
     const mask = ((1 << len) - 1) << sft;
 
     if (loggedsomh < 32) {
@@ -475,11 +518,11 @@ function cmd_TEXTURE(state: State, w0: number, w1: number) {
     flushDraw(state);
 
     const params = {
-        scaleS: (bitfieldExtract(w1, 16, 16) + 1) / 65536.0, // FIXME: correct?
-        scaleT: (bitfieldExtract(w1, 0, 16) + 1) / 65536.0, // FIXME: correct?
-        level: bitfieldExtract(w0, 11, 3),
-        tile: bitfieldExtract(w0, 8, 3),
-        on: bitfieldExtract(w0, 1, 7),
+        scaleS: (extractBits(w1, 16, 16) + 1) / 65536.0, // FIXME: correct?
+        scaleT: (extractBits(w1, 0, 16) + 1) / 65536.0, // FIXME: correct?
+        level: extractBits(w0, 11, 3),
+        tile: extractBits(w0, 8, 3),
+        on: extractBits(w0, 1, 7),
     };
 
     if (loggedtexture < 32) {
@@ -511,10 +554,6 @@ function r5g5b5a1(dst: Uint8Array, dstOffs: number, p: number) {
     dst[dstOffs + 3] = a;
 }
 
-function bitfieldExtract(value: number, offset: number, bits: number) {
-    return (value >> offset) & ((1 << bits) - 1);
-}
-
 let numCombinesLogged = 0;
 function cmd_SETCOMBINE(state: State, w0: number, w1: number) {
     flushDraw(state);
@@ -522,30 +561,30 @@ function cmd_SETCOMBINE(state: State, w0: number, w1: number) {
     state.combiners = Object.freeze({
         colorCombiners: Object.freeze([
             Object.freeze({
-                subA: bitfieldExtract(w0, 20, 4),
-                subB: bitfieldExtract(w1, 28, 4),
-                mul: bitfieldExtract(w0, 15, 5),
-                add: bitfieldExtract(w1, 15, 3),
+                subA: extractBits(w0, 20, 4),
+                subB: extractBits(w1, 28, 4),
+                mul: extractBits(w0, 15, 5),
+                add: extractBits(w1, 15, 3),
             }),
             Object.freeze({
-                subA: bitfieldExtract(w0, 5, 4),
-                subB: bitfieldExtract(w1, 24, 4),
-                mul: bitfieldExtract(w0, 0, 5),
-                add: bitfieldExtract(w1, 6, 3),
+                subA: extractBits(w0, 5, 4),
+                subB: extractBits(w1, 24, 4),
+                mul: extractBits(w0, 0, 5),
+                add: extractBits(w1, 6, 3),
             }),
         ]),
         alphaCombiners: Object.freeze([
             Object.freeze({
-                subA: bitfieldExtract(w0, 12, 3),
-                subB: bitfieldExtract(w1, 12, 3),
-                mul: bitfieldExtract(w0, 9, 3),
-                add: bitfieldExtract(w1, 9, 3),
+                subA: extractBits(w0, 12, 3),
+                subB: extractBits(w1, 12, 3),
+                mul: extractBits(w0, 9, 3),
+                add: extractBits(w1, 9, 3),
             }),
             Object.freeze({
-                subA: bitfieldExtract(w1, 21, 3),
-                subB: bitfieldExtract(w1, 3, 3),
-                mul: bitfieldExtract(w1, 18, 3),
-                add: bitfieldExtract(w1, 0, 3),
+                subA: extractBits(w1, 21, 3),
+                subB: extractBits(w1, 3, 3),
+                mul: extractBits(w1, 18, 3),
+                add: extractBits(w1, 0, 3),
             }),
         ]),
     });
@@ -560,10 +599,10 @@ function cmd_SETENVCOLOR(state: State, w0: number, w1: number) {
     flushDraw(state);
 
     state.envColor = vec4.clone([
-        bitfieldExtract(w1, 24, 8) / 255,
-        bitfieldExtract(w1, 16, 8) / 255,
-        bitfieldExtract(w1, 8, 8) / 255,
-        bitfieldExtract(w1, 0, 8) / 255,
+        extractBits(w1, 24, 8) / 255,
+        extractBits(w1, 16, 8) / 255,
+        extractBits(w1, 8, 8) / 255,
+        extractBits(w1, 0, 8) / 255,
     ]);
 }
 
@@ -571,23 +610,56 @@ function cmd_SETPRIMCOLOR(state: State, w0: number, w1: number) {
     flushDraw(state);
 
     state.primColor = vec4.clone([
-        bitfieldExtract(w1, 24, 8) / 255,
-        bitfieldExtract(w1, 16, 8) / 255,
-        bitfieldExtract(w1, 8, 8) / 255,
-        bitfieldExtract(w1, 0, 8) / 255,
+        extractBits(w1, 24, 8) / 255,
+        extractBits(w1, 16, 8) / 255,
+        extractBits(w1, 8, 8) / 255,
+        extractBits(w1, 0, 8) / 255,
     ]);
 }
 
+let loggedsettimg = 0;
 function cmd_SETTIMG(state: State, w0: number, w1: number) {
-    const format = (w0 >> 21) & 0x7;
-    const size = (w0 >> 19) & 0x3;
-    const width = (w0 & 0x1000) + 1;
-    const addr = w1;
-    state.textureImageAddr = addr;
+    flushDraw(state);
+
+    state.timgParams = Object.freeze({
+        fmt: extractBits(w0, 21, 3),
+        siz: extractBits(w0, 19, 2),
+        width: extractBits(w0, 0, 12) + 1,
+        addr: w1,
+    });
+
+    if (loggedsettimg < 32) {
+        console.log(`SETTIMG ${JSON.stringify(state.timgParams, null, '\t')}`);
+        loggedsettimg++;
+    }
 }
 
+let loggedsettile = 0;
 function cmd_SETTILE(state: State, w0: number, w1: number) {
-    const tileIdx = (w1 >> 24) & 0x7;
+    flushDraw(state);
+
+    const tileIdx = extractBits(w1, 24, 3);
+    state.tileParams[tileIdx] = Object.freeze({
+        fmt: extractBits(w0, 21, 3),
+        siz: extractBits(w0, 19, 2),
+        line: extractBits(w0, 9, 9),
+        tmem: extractBits(w0, 0, 9),
+        tile: extractBits(w1, 24, 3),
+        palette: extractBits(w1, 20, 4),
+        cmt: extractBits(w1, 18, 2),
+        cms: extractBits(w1, 8, 2),
+        maskt: extractBits(w1, 14, 4),
+        masks: extractBits(w1, 4, 4),
+        shiftt: extractBits(w1, 10, 4),
+        shifts: extractBits(w1, 0, 4),
+    });
+
+    if (loggedsettile < 32) {
+        console.log(`SETTILE ${JSON.stringify(state.tileParams[tileIdx], null, '\t')}`);
+        loggedsettile++;
+    }
+
+    // TODO: remove and rework
     state.textureTiles[tileIdx] = {
         format: (w0 >> 16) & 0xFF,
         cms: (w1 >> 8) & 0x3,
@@ -600,25 +672,117 @@ function cmd_SETTILE(state: State, w0: number, w1: number) {
         maskS: (w1 >> 4) & 0xF,
         maskT: (w1 >> 14) & 0xF,
 
+        tmem: state.tileParams[tileIdx].tmem,
+
         width: 0, height: 0, dstFormat: null,
         pixels: null, addr: 0, glTextureId: null,
         uls: 0, ult: 0, lrs: 0, lrt: 0,
     };
 }
 
-function cmd_SETTILESIZE(state: State, w0: number, w1: number) {
-    const tileIdx = (w1 >> 24) & 0x7;
+function setTileSize(state: State, tileIdx: number, uls: number, ult: number, lrs: number, lrt: number) {
     const tile = state.textureTiles[tileIdx];
-
-    tile.uls = (w0 >> 14) & 0x3FF;
-    tile.ult = (w0 >> 2) & 0x3FF;
-    tile.lrs = (w1 >> 14) & 0x3FF;
-    tile.lrt = (w1 >> 2) & 0x3FF;
-
+    tile.uls = uls;
+    tile.ult = ult;
+    tile.lrs = lrs;
+    tile.lrt = lrt;
     calcTextureSize(tile);
 }
 
+let loggedsettilesize = 0;
+function cmd_SETTILESIZE(state: State, w0: number, w1: number) {
+    flushDraw(state);
+
+    const params = Object.freeze({
+        tile: extractBits(w1, 24, 3),
+        uls: extractBits(w0, 12, 12),
+        ult: extractBits(w0, 0, 12),
+        lrs: extractBits(w1, 12, 12),
+        lrt: extractBits(w1, 0, 12),
+    });
+
+    if (loggedsettilesize < 32) {
+        console.log(`SETTILESIZE ${JSON.stringify(params, null, '\t')}`);
+        loggedsettilesize++;
+    }
+
+    setTileSize(state, params.tile, params.uls, params.ult, params.lrs, params.lrt);
+}
+
+let loggedloadblock = 0;
+function cmd_LOADBLOCK(state: State, w0: number, w1: number) {
+    flushDraw(state);
+
+    const params = Object.freeze({
+        tile: extractBits(w1, 24, 3),
+        uls: extractBits(w0, 12, 12),
+        ult: extractBits(w0, 0, 12),
+        lrs: extractBits(w1, 12, 12),
+        dxt: extractBits(w1, 0, 12),
+    });
+
+    if (loggedloadblock < 32) {
+        console.log(`LOADBLOCK ${JSON.stringify(params, null, '\t')}`);
+        loggedloadblock++;
+    }
+
+    setTileSize(state, params.tile, params.uls, params.ult, params.lrs, params.dxt);
+
+    const tileParams = state.tileParams[params.tile];
+    // calculate bytes per line
+    const bpl = state.timgParams.width << state.timgParams.siz >> 1;
+    const srcOffs = state.lookupAddress(state.timgParams.addr + params.ult * bpl + (params.uls << state.timgParams.siz >> 1));
+    const dstOffs = tileParams.tmem;
+    let numBytes = (params.lrs - params.uls + 1) << tileParams.siz >> 1;
+    if ((numBytes & 7) != 0) {
+        // Round up to next multiple of 8
+        numBytes = (numBytes & ~7) + 8;
+    }
+    for (let i = 0; i < numBytes; i++) {
+        // TODO: blit
+        state.tmem[dstOffs + i] = state.rom.view.getUint8(srcOffs + i);
+    }
+}
+
+let loggedloadtile = 0;
+function cmd_LOADTILE(state: State, w0: number, w1: number) {
+    flushDraw(state);
+
+    const params = Object.freeze({
+        tile: extractBits(w1, 24, 3),
+        uls: extractBits(w0, 12, 12),
+        ult: extractBits(w0, 0, 12),
+        lrs: extractBits(w1, 12, 12),
+        lrt: extractBits(w1, 0, 12),
+    });
+
+    if (loggedloadtile < 32) {
+        console.log(`LOADTILE ${JSON.stringify(params, null, '\t')}`);
+        loggedloadtile++;
+    }
+
+    setTileSize(state, params.tile, params.uls, params.ult, params.lrs, params.lrt);
+}
+
+let loggedloadtlut = 0;
 function cmd_LOADTLUT(state: State, w0: number, w1: number) {
+    flushDraw(state);
+
+    const params = Object.freeze({
+        tile: extractBits(w1, 24, 3),
+        uls: extractBits(w0, 12, 12),
+        ult: extractBits(w0, 0, 12),
+        lrs: extractBits(w1, 12, 12),
+        lrt: extractBits(w1, 0, 12),
+    });
+
+    if (loggedloadtlut < 32) {
+        console.log(`LOADTLUT ${JSON.stringify(params, null, '\t')}`);
+        loggedloadtlut++;
+    }
+
+    setTileSize(state, params.tile, params.uls, params.ult, params.lrs, params.lrt);
+
     const rom = state.rom;
 
     // XXX: properly implement uls/ult/lrs/lrt
@@ -626,7 +790,7 @@ function cmd_LOADTLUT(state: State, w0: number, w1: number) {
     const dst = new Uint8Array(size * 4);
 
     // FIXME: which tile?
-    let srcOffs = state.lookupAddress(state.textureImageAddr);
+    let srcOffs = state.lookupAddress(state.timgParams.addr);
     let dstOffs = 0;
 
     for (let i = 0; i < size; i++) {
@@ -1012,6 +1176,8 @@ CommandDispatch[UCodeCommands.MTX] = cmd_MTX;
 CommandDispatch[UCodeCommands.POPMTX] = cmd_POPMTX;
 CommandDispatch[UCodeCommands.SETOTHERMODE_L] = cmd_SETOTHERMODE_L;
 CommandDispatch[UCodeCommands.SETOTHERMODE_H] = cmd_SETOTHERMODE_H;
+CommandDispatch[UCodeCommands.LOADBLOCK] = cmd_LOADBLOCK;
+CommandDispatch[UCodeCommands.LOADTILE] = cmd_LOADTILE;
 CommandDispatch[UCodeCommands.LOADTLUT] = cmd_LOADTLUT;
 CommandDispatch[UCodeCommands.TEXTURE] = cmd_TEXTURE;
 CommandDispatch[UCodeCommands.SETCOMBINE] = cmd_SETCOMBINE;
@@ -1024,37 +1190,8 @@ CommandDispatch[UCodeCommands.SETTILESIZE] = cmd_SETTILESIZE;
 const F3DEX2 = {};
 
 let warned = false;
-function loadTextureBlock(state: State, cmds: number[][]) {
-    flushDraw(state);
-
-    const tileIdx = (cmds[5][1] >> 24) & 0x7;
-
-    cmd_SETTIMG(state, cmds[0][0], cmds[0][1]);
-    cmd_SETTILE(state, cmds[5][0], cmds[5][1]);
-    cmd_SETTILESIZE(state, cmds[6][0], cmds[6][1]);
-    const tile = state.textureTiles[tileIdx];
-    tile.addr = state.textureImageAddr;
-}
 
 function runDL(state: State, addr: number) {
-    function collectNextCmds(): number[][] {
-        const L = [];
-        let voffs = offs;
-        for (let i = 0; i < 8; i++) {
-            const cmd0 = rom.view.getUint32(voffs, false);
-            const cmd1 = rom.view.getUint32(voffs + 4, false);
-            L.push([cmd0, cmd1]);
-            voffs += 8;
-        }
-        return L;
-    }
-    function matchesCmdStream(cmds: number[][], needle: number[]): boolean {
-        for (let i = 0; i < needle.length; i++)
-            if (cmds[i][0] >>> 24 !== needle[i])
-                return false;
-        return true;
-    }
-
     const rom = state.rom;
     let offs = state.lookupAddress(addr);
     if (offs === null)
@@ -1066,16 +1203,6 @@ function runDL(state: State, addr: number) {
         const cmdType = cmd0 >>> 24;
         if (cmdType === UCodeCommands.ENDDL)
             break;
-
-        // Texture uploads need to be special.
-        if (cmdType === UCodeCommands.SETTIMG) {
-            const nextCmds = collectNextCmds();
-            if (matchesCmdStream(nextCmds, [UCodeCommands.SETTIMG, UCodeCommands.SETTILE, UCodeCommands.RDPLOADSYNC, UCodeCommands.LOADBLOCK, UCodeCommands.RDPPIPESYNC, UCodeCommands.SETTILE, UCodeCommands.SETTILESIZE])) {
-                loadTextureBlock(state, nextCmds);
-                offs += 7 * 8;
-                continue;
-            }
-        }
 
         const func = CommandDispatch[cmdType];
         if (func)
