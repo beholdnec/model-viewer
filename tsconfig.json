@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
         "target": "es5",
+        "allowUnreachableCode": true,
         "alwaysStrict": true,
         "downlevelIteration": true,
         "noImplicitReturns": true,

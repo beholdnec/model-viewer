@@ -117,9 +117,21 @@ interface TileParams {
     masks: number;
     shiftt: number;
     shifts: number;
+
+    uls: number;
+    ult: number;
+    lrs: number;
+    lrt: number;
+}
+
+interface LoadedTexture {
+    glTextureId: WebGLTexture;
+    width: number;
+    height: number;
 }
 
 const TMEM_SIZE = 4096;
+const NUM_TILES = 8;
 
 let loggedprogparams = 0;
 class State {
@@ -150,10 +162,33 @@ class State {
     public palettePixels: Uint8Array;
     public timgParams: Readonly<TImgParams>;
     public tileParams: Array<Readonly<TileParams>> = [];
-    public textureTiles: Array<TextureTile> = [];
 
     public rom: ZELVIEW0.ZELVIEW0;
     public banks: ZELVIEW0.RomBanks;
+
+    constructor() {
+        // Fill tile parameters with default values.
+        for (let i = 0; i < NUM_TILES; i++) {
+            this.tileParams[i] = Object.freeze({
+                fmt: 0,
+                siz: 0,
+                line: 0,
+                tmem: 0,
+                palette: 0,
+                cmt: 0,
+                cms: 0,
+                maskt: 0,
+                masks: 0,
+                shiftt: 0,
+                shifts: 0,
+            
+                uls: 0,
+                ult: 0,
+                lrs: 0,
+                lrt: 0,
+            });
+        }
+    }
 
     public lookupAddress(addr: number) {
         return this.rom.lookupAddress(this.banks, addr);
@@ -176,28 +211,28 @@ class State {
         const otherModeL = this.otherModeL;
         const otherModeH = this.otherModeH;
 
-        let glTex0: WebGLTexture = null;
-        let glTex0Dims = [1, 1];
-        if (this.textureTiles[this.tex0TileNum]) {
-            let tile = this.textureTiles[this.tex0TileNum];
-            loadTexture(this.gl, tile, new DataView(this.tmem.buffer), tile.tmem, this.palettePixels);
-            glTex0 = tile.glTextureId;
-            glTex0Dims = [tile.width, tile.height];
-        }
-
-        let glTex1: WebGLTexture = null;
-        let glTex1Dims = [1, 1];
-        if (this.textureTiles[this.tex1TileNum]) {
-            let tile = this.textureTiles[this.tex1TileNum];
-            loadTexture(this.gl, tile, new DataView(this.tmem.buffer), tile.tmem, this.palettePixels);
-            glTex1 = tile.glTextureId;
-            glTex1Dims = [tile.width, tile.height];
-        }
-
         const progParams: Render.F3DEX2ProgramParameters = Object.freeze({
             use2Cycle: (extractBits(otherModeH, OtherModeH.CYCLETYPE_SFT, OtherModeH.CYCLETYPE_LEN) == CYCLETYPE._2CYCLE),
             combiners: this.combiners,
         });
+
+        let glTex0: WebGLTexture = null;
+        let glTex0Dims = [1, 1];
+        if (Render.programParametersUsesTexel0(progParams)) {
+            let tileParams = this.tileParams[this.tex0TileNum];
+            const loaded = loadTexture(this.gl, tileParams, new DataView(this.tmem.buffer), tileParams.tmem, this.palettePixels);
+            glTex0 = loaded.glTextureId;
+            glTex0Dims = [loaded.width, loaded.height];
+        }
+
+        let glTex1: WebGLTexture = null;
+        let glTex1Dims = [1, 1];
+        if (Render.programParametersUsesTexel1(progParams)) {
+            let tileParams = this.tileParams[this.tex1TileNum];
+            const loaded = loadTexture(this.gl, tileParams, new DataView(this.tmem.buffer), tileParams.tmem, this.palettePixels);
+            glTex1 = loaded.glTextureId;
+            glTex1Dims = [loaded.width, loaded.height];
+        }
         
         if (loggedprogparams < 32) {
             console.log(`Program parameters: ${JSON.stringify(progParams, null, '\t')}`);
@@ -343,22 +378,13 @@ function tri(idxData: Uint8Array, offs: number, cmd: number) {
     idxData[offs + 2] = (cmd >> 1) & 0x7F;
 }
 
-function flushTexture(state: State) {
-    for (let i = 0; i < state.textureTiles.length; i++) {
-        if (state.textureTiles[i])
-            loadTile(state, state.textureTiles[i]);
-    }
-}
-
 function cmd_TRI1(state: State, w0: number, w1: number) {
-    flushTexture(state);
     const idxData = new Uint8Array(3);
     tri(idxData, 0, w0);
     translateTRI(state, idxData);
 }
 
 function cmd_TRI2(state: State, w0: number, w1: number) {
-    flushTexture(state);
     const idxData = new Uint8Array(6);
     tri(idxData, 0, w0); tri(idxData, 3, w1);
     translateTRI(state, idxData);
@@ -652,41 +678,28 @@ function cmd_SETTILE(state: State, w0: number, w1: number) {
         masks: extractBits(w1, 4, 4),
         shiftt: extractBits(w1, 10, 4),
         shifts: extractBits(w1, 0, 4),
+
+        // FIXME: are these params preserved?
+        uls: 0,
+        ult: 0,
+        lrs: 0,
+        lrt: 0,
     });
 
     if (loggedsettile < 32) {
         console.log(`SETTILE ${JSON.stringify(state.tileParams[tileIdx], null, '\t')}`);
         loggedsettile++;
     }
-
-    // TODO: remove and rework
-    state.textureTiles[tileIdx] = {
-        format: (w0 >> 16) & 0xFF,
-        cms: (w1 >> 8) & 0x3,
-        cmt: (w1 >> 18) & 0x3,
-        // tmem: w0 & 0x1FF,
-        lineSize: (w0 >> 9) & 0x1FF,
-        // palette: (w1 >> 20) & 0xF,
-        // shiftS: w1 & 0xF,
-        // shiftT: (w1 >> 10) & 0xF,
-        maskS: (w1 >> 4) & 0xF,
-        maskT: (w1 >> 14) & 0xF,
-
-        tmem: state.tileParams[tileIdx].tmem,
-
-        width: 0, height: 0, dstFormat: null,
-        pixels: null, addr: 0, glTextureId: null,
-        uls: 0, ult: 0, lrs: 0, lrt: 0,
-    };
 }
 
 function setTileSize(state: State, tileIdx: number, uls: number, ult: number, lrs: number, lrt: number) {
-    const tile = state.textureTiles[tileIdx];
-    tile.uls = uls;
-    tile.ult = ult;
-    tile.lrs = lrs;
-    tile.lrt = lrt;
-    calcTextureSize(tile);
+    let oldTile = Object.assign({}, state.tileParams[tileIdx]);
+    state.tileParams[tileIdx] = Object.freeze(Object.assign(oldTile, {
+        uls: uls,
+        ult: ult,
+        lrs: lrs,
+        lrt: lrt,
+    }));
 }
 
 let loggedsettilesize = 0;
@@ -810,193 +823,181 @@ function tileCacheKey(state: State, tile: TextureTile) {
 }
 
 // XXX: This is global to cut down on resources between DLs.
-const tileCache = new Map<number, TextureTile>();
-function loadTile(state: State, texture: TextureTile) {
-    if (texture.glTextureId)
-        return;
+// const tileCache = new Map<number, TextureTile>();
+// function loadTile(state: State, texture: TextureTile) {
+//     if (texture.glTextureId)
+//         return;
 
-    const key = tileCacheKey(state, texture);
-    const otherTile = tileCache.get(key);
-    if (!otherTile) {
-        const srcOffs = state.lookupAddress(texture.addr);
-        loadTexture(state.gl, texture, state.rom.view, srcOffs, state.palettePixels);
-        state.textures.push(textureToCanvas(texture));
-        tileCache.set(key, texture);
-    } else if (texture !== otherTile) {
-        texture.glTextureId = otherTile.glTextureId;
-    }
+//     const key = tileCacheKey(state, texture);
+//     const otherTile = tileCache.get(key);
+//     if (!otherTile) {
+//         const srcOffs = state.lookupAddress(texture.addr);
+//         loadTexture(state.gl, texture, state.rom.view, srcOffs, state.palettePixels);
+//         state.textures.push(textureToCanvas(texture));
+//         tileCache.set(key, texture);
+//     } else if (texture !== otherTile) {
+//         texture.glTextureId = otherTile.glTextureId;
+//     }
+// }
+
+interface ConvertResult {
+    data: Uint8Array;
+    glFormat: number;
 }
 
-function convert_CI4(texture: TextureTile, src: DataView, srcOffs: number, palette: Uint8Array) {
+function convert_CI4(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number, palette: Uint8Array): ConvertResult {
     if (!palette)
-        return;
+        return null;
 
-    const nBytes = texture.width * texture.height * 4;
+    const nBytes = nTexels * 4;
     const dst = new Uint8Array(nBytes);
     let i = 0;
-    for (let y = 0; y < texture.height; y++) {
-        for (let x = 0; x < texture.width; x += 2) {
-            const b = src.getUint8(srcOffs++);
-            let idx;
+    while (i < nBytes) {
+        const b = src.getUint8(srcOffs++);
+        let idx;
 
-            idx = ((b & 0xF0) >> 4) * 4;
-            dst[i++] = palette[idx++];
-            dst[i++] = palette[idx++];
-            dst[i++] = palette[idx++];
-            dst[i++] = palette[idx++];
+        idx = ((b & 0xF0) >> 4) * 4;
+        dst[i++] = palette[idx++];
+        dst[i++] = palette[idx++];
+        dst[i++] = palette[idx++];
+        dst[i++] = palette[idx++];
 
-            idx = (b & 0x0F) * 4;
-            dst[i++] = palette[idx++];
-            dst[i++] = palette[idx++];
-            dst[i++] = palette[idx++];
-            dst[i++] = palette[idx++];
-        }
+        idx = (b & 0x0F) * 4;
+        dst[i++] = palette[idx++];
+        dst[i++] = palette[idx++];
+        dst[i++] = palette[idx++];
+        dst[i++] = palette[idx++];
     }
 
-    texture.pixels = dst;
+    return {data: dst, glFormat: gl.RGBA};
 }
 
-function convert_I4(texture: TextureTile, src: DataView, srcOffs: number) {
-    const nBytes = texture.width * texture.height * 2;
+function convert_I4(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number): ConvertResult {
+    const nBytes = nTexels * 2;
     const dst = new Uint8Array(nBytes);
-
     let i = 0;
-    for (let y = 0; y < texture.height; y++) {
-        for (let x = 0; x < texture.width; x += 2) {
-            const b = src.getUint8(srcOffs++);
+    while (i < nBytes) {
+        const b = src.getUint8(srcOffs++);
 
-            let p;
-            p = (b & 0xF0) >> 4;
-            p = p << 4 | p;
-            dst[i++] = p;
-            dst[i++] = p;
+        let p;
+        p = (b & 0xF0) >> 4;
+        p = p << 4 | p;
+        dst[i++] = p;
+        dst[i++] = p;
 
-            p = (b & 0x0F);
-            p = p << 4 | p;
-            dst[i++] = p;
-            dst[i++] = p;
-        }
+        p = (b & 0x0F);
+        p = p << 4 | p;
+        dst[i++] = p;
+        dst[i++] = p;
     }
 
-    texture.pixels = dst;
+    return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
 }
 
-function convert_IA4(texture: TextureTile, src: DataView, srcOffs: number) {
-    const nBytes = texture.width * texture.height * 2;
+function convert_IA4(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number): ConvertResult {
+    const nBytes = nTexels * 2;
     const dst = new Uint8Array(nBytes);
 
     let i = 0;
-    for (let y = 0; y < texture.height; y++) {
-        for (let x = 0; x < texture.width; x += 2) {
-            const b = src.getUint8(srcOffs++);
-            let p; let pm;
+    while (i < nBytes) {
+        const b = src.getUint8(srcOffs++);
+        let p; let pm;
 
-            p = (b & 0xF0) >> 4;
-            pm = p & 0x0E;
-            dst[i++] = (pm << 4 | pm);
-            dst[i++] = (p & 0x01) ? 0xFF : 0x00;
+        p = (b & 0xF0) >> 4;
+        pm = p & 0x0E;
+        dst[i++] = (pm << 4 | pm);
+        dst[i++] = (p & 0x01) ? 0xFF : 0x00;
 
-            p = (b & 0x0F);
-            pm = p & 0x0E;
-            dst[i++] = (pm << 4 | pm);
-            dst[i++] = (p & 0x01) ? 0xFF : 0x00;
-        }
+        p = (b & 0x0F);
+        pm = p & 0x0E;
+        dst[i++] = (pm << 4 | pm);
+        dst[i++] = (p & 0x01) ? 0xFF : 0x00;
     }
 
-    texture.pixels = dst;
+    return {data: dst, glFormat: gl.RGBA};
 }
 
-function convert_CI8(texture: TextureTile, src: DataView, srcOffs: number, palette: Uint8Array) {
+function convert_CI8(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number, palette: Uint8Array): ConvertResult {
     if (!palette)
-        return;
+        return null;
 
-    const nBytes = texture.width * texture.height * 4;
+    const nBytes = nTexels * 4;
     const dst = new Uint8Array(nBytes);
 
     let i = 0;
-    for (let y = 0; y < texture.height; y++) {
-        for (let x = 0; x < texture.width; x++) {
-            let idx = src.getUint8(srcOffs) * 4;
-            dst[i++] = palette[idx++];
-            dst[i++] = palette[idx++];
-            dst[i++] = palette[idx++];
-            dst[i++] = palette[idx++];
-            srcOffs++;
-        }
+    while (i < nBytes) {
+        let idx = src.getUint8(srcOffs) * 4;
+        dst[i++] = palette[idx++];
+        dst[i++] = palette[idx++];
+        dst[i++] = palette[idx++];
+        dst[i++] = palette[idx++];
+        srcOffs++;
     }
 
-    texture.pixels = dst;
+    return {data: dst, glFormat: gl.RGBA};
 }
 
-function convert_I8(texture: TextureTile, src: DataView, srcOffs: number) {
-    const nBytes = texture.width * texture.height * 2;
+function convert_I8(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number): ConvertResult {
+    const nBytes = nTexels * 2;
     const dst = new Uint8Array(nBytes);
 
     let i = 0;
-    for (let y = 0; y < texture.height; y++) {
-        for (let x = 0; x < texture.width; x++) {
-            const p = src.getUint8(srcOffs++);
-            dst[i++] = p;
-            dst[i++] = p;
-        }
+    while (i < nBytes) {
+        const p = src.getUint8(srcOffs++);
+        dst[i++] = p;
+        dst[i++] = p;
     }
 
-    texture.pixels = dst;
+    return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
 }
 
-function convert_IA8(texture: TextureTile, src: DataView, srcOffs: number) {
-    const nBytes = texture.width * texture.height * 2;
+function convert_IA8(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number): ConvertResult {
+    const nBytes = nTexels * 2;
     const dst = new Uint8Array(nBytes);
 
     let i = 0;
-    for (let y = 0; y < texture.height; y++) {
-        for (let x = 0; x < texture.width; x++) {
-            const b = src.getUint8(srcOffs++);
-            let p;
+    while (i < nBytes) {
+        const b = src.getUint8(srcOffs++);
+        let p;
 
-            p = (b & 0xF0) >> 4;
-            p = p << 4 | p;
-            dst[i++] = p;
+        p = (b & 0xF0) >> 4;
+        p = p << 4 | p;
+        dst[i++] = p;
 
-            p = (b & 0x0F);
-            p = p >> 4 | p;
-            dst[i++] = p;
-        }
+        p = (b & 0x0F);
+        p = p >> 4 | p;
+        dst[i++] = p;
     }
 
-    texture.pixels = dst;
+    return {data: dst, glFormat: gl.RGBA};
 }
 
-function convert_RGBA16(texture: TextureTile, src: DataView, srcOffs: number) {
-    const nBytes = texture.width * texture.height * 4;
+function convert_RGBA16(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number): ConvertResult {
+    const nBytes = nTexels * 4;
     const dst = new Uint8Array(nBytes);
 
     let i = 0;
-    for (let y = 0; y < texture.height; y++) {
-        for (let x = 0; x < texture.width; x++) {
-            const pixel = src.getUint16(srcOffs, false);
-            r5g5b5a1(dst, i, pixel);
-            i += 4;
-            srcOffs += 2;
-        }
+    while (i < nBytes) {
+        const pixel = src.getUint16(srcOffs, false);
+        r5g5b5a1(dst, i, pixel);
+        i += 4;
+        srcOffs += 2;
     }
 
-    texture.pixels = dst;
+    return {data: dst, glFormat: gl.RGBA};
 }
 
-function convert_IA16(texture: TextureTile, src: DataView, srcOffs: number) {
-    const nBytes = texture.width * texture.height * 2;
+function convert_IA16(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number): ConvertResult {
+    const nBytes = nTexels * 2;
     const dst = new Uint8Array(nBytes);
 
     let i = 0;
-    for (let y = 0; y < texture.height; y++) {
-        for (let x = 0; x < texture.width; x++) {
-            dst[i++] = src.getUint8(srcOffs++);
-            dst[i++] = src.getUint8(srcOffs++);
-        }
+    while (i < nBytes) {
+        dst[i++] = src.getUint8(srcOffs++);
+        dst[i++] = src.getUint8(srcOffs++);
     }
 
-    texture.pixels = dst;
+    return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
 }
 
 function textureToCanvas(texture: TextureTile): Viewer.Texture {
@@ -1036,37 +1037,60 @@ function textureToCanvas(texture: TextureTile): Viewer.Texture {
     return { name: canvas.title, surfaces };
 }
 
-function loadTexture(gl: WebGL2RenderingContext, texture: TextureTile, src: DataView, srcOffs: number, palette: Uint8Array) {
-    function convertTexturePixels() {
-        switch (texture.format) {
-        // 4-bit
-        case 0x40: return convert_CI4(texture, src, srcOffs, palette);    // CI
-        case 0x60: return convert_IA4(texture, src, srcOffs);    // IA
-        case 0x80: return convert_I4(texture, src, srcOffs);     // I
-        // 8-bit
-        case 0x48: return convert_CI8(texture, src, srcOffs, palette);    // CI
-        case 0x68: return convert_IA8(texture, src, srcOffs);    // IA
-        case 0x88: return convert_I8(texture, src, srcOffs);     // I
-        // 16-bit
-        case 0x10: return convert_RGBA16(texture, src, srcOffs); // RGBA
-        case 0x70: return convert_IA16(texture, src, srcOffs);   // IA
-        default: console.error("Unsupported texture", texture.format.toString(16));
+const G_IM_FMT = {
+    RGBA: 0,
+    CI: 2,
+    IA: 3,
+    I: 4,
+};
+
+const G_IM_SIZ = {
+    _4b: 0,
+    _8b: 1,
+    _16b: 2,
+};
+
+function imFmtSiz(fmt: number, siz: number) {
+    return (fmt << 4) | siz;
+}
+
+function loadTexture(gl: WebGL2RenderingContext, tileParams: TileParams, src: DataView, srcOffs: number, palette: Uint8Array): LoadedTexture {
+    const textureSize = calcTextureSize(tileParams);
+
+    function convertTexturePixels(): ConvertResult {
+        const nTexels = textureSize.width * textureSize.height;
+        const fmtsiz = imFmtSiz(tileParams.fmt, tileParams.siz);
+        switch (fmtsiz) {
+        case imFmtSiz(G_IM_FMT.RGBA, G_IM_SIZ._16b):
+            return convert_RGBA16(gl, src, srcOffs, nTexels);
+        case imFmtSiz(G_IM_FMT.CI, G_IM_SIZ._4b):
+            return convert_CI4(gl, src, srcOffs, nTexels, palette);
+        case imFmtSiz(G_IM_FMT.CI, G_IM_SIZ._8b):
+            return convert_CI8(gl, src, srcOffs, nTexels, palette);
+        case imFmtSiz(G_IM_FMT.IA, G_IM_SIZ._16b):
+            return convert_IA16(gl, src, srcOffs, nTexels);
+        case imFmtSiz(G_IM_FMT.I, G_IM_SIZ._8b):
+            return convert_I8(gl, src, srcOffs, nTexels);
+        // // 4-bit
+        // case 0x40: return convert_CI4(gl, src, srcOffs, nTexels, palette);    // CI
+        // case 0x60: return convert_IA4(gl, src, srcOffs, nTexels);    // IA
+        // case 0x80: return convert_I4(gl, src, srcOffs, nTexels);     // I
+        // // 8-bit
+        // case 0x48: return convert_CI8(gl, src, srcOffs, nTexels, palette);    // CI
+        // case 0x68: return convert_IA8(gl, src, srcOffs, nTexels);    // IA
+        // case 0x88: return convert_I8(gl, src, srcOffs, nTexels);     // I
+        // // 16-bit
+        // case 0x10: return convert_RGBA16(gl, src, srcOffs, nTexels); // RGBA
+        // case 0x70: return convert_IA16(gl, src, srcOffs, nTexels);   // IA
+        default:
+            console.error(`Unsupported tile format and size 0x${fmtsiz.toString(16)}`);
+            return null;
         }
     }
 
-    texture.dstFormat = calcTextureDestFormat(texture);
-
+    let converted = null;
     if (srcOffs !== null)
-        convertTexturePixels();
-
-    if (!texture.pixels) {
-        if (texture.dstFormat === "i8")
-            texture.pixels = new Uint8Array(texture.width * texture.height);
-        else if (texture.dstFormat === "i8_a8")
-            texture.pixels = new Uint8Array(texture.width * texture.height * 2);
-        else if (texture.dstFormat === "rgba8")
-            texture.pixels = new Uint8Array(texture.width * texture.height * 4);
-    }
+        converted = convertTexturePixels();
 
     function translateWrap(cm: number) {
         switch (cm) {
@@ -1077,24 +1101,21 @@ function loadTexture(gl: WebGL2RenderingContext, texture: TextureTile, src: Data
         }
     }
 
-    const texId = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texId);
-    // Filters are set to NEAREST here because filtering is performed in the fragment shader.
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, translateWrap(texture.cms));
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, translateWrap(texture.cmt));
+    let texId = null;
+    if (converted !== null) {
+        texId = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texId);
+        // Filters are set to NEAREST here because filtering is performed in the fragment shader.
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, translateWrap(tileParams.cms));
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, translateWrap(tileParams.cmt));
+        gl.texImage2D(gl.TEXTURE_2D, 0, converted.glFormat, textureSize.width, textureSize.height, 0, converted.glFormat, gl.UNSIGNED_BYTE, converted.data);
+    } else {
+        gl.bindTexture(gl.TEXTURE_2D, null);
+    }
 
-    let glFormat;
-    if (texture.dstFormat === "i8")
-        glFormat = gl.LUMINANCE;
-    else if (texture.dstFormat === "i8_a8")
-        glFormat = gl.LUMINANCE_ALPHA;
-    else if (texture.dstFormat === "rgba8")
-        glFormat = gl.RGBA;
-
-    gl.texImage2D(gl.TEXTURE_2D, 0, glFormat, texture.width, texture.height, 0, glFormat, gl.UNSIGNED_BYTE, texture.pixels);
-    texture.glTextureId = texId;
+    return {glTextureId: texId, width: textureSize.width, height: textureSize.height};
 }
 
 function calcTextureDestFormat(texture: TextureTile): TextureDestFormat {
@@ -1107,36 +1128,53 @@ function calcTextureDestFormat(texture: TextureTile): TextureDestFormat {
     }
 }
 
-function calcTextureSize(texture: TextureTile) {
+interface TextureSize {
+    width: number;
+    height: number;
+}
+
+function calcTextureSize(tileParams: TileParams): TextureSize {
+    let fmtsiz = imFmtSiz(tileParams.fmt, tileParams.siz);
     let maxTexel, lineShift;
-    switch (texture.format) {
-    // 4-bit
-    case 0x00: maxTexel = 4096; lineShift = 4; break; // RGBA
-    case 0x40: maxTexel = 4096; lineShift = 4; break; // CI
-    case 0x60: maxTexel = 8196; lineShift = 4; break; // IA
-    case 0x80: maxTexel = 8196; lineShift = 4; break; // I
-    // 8-bit
-    case 0x08: maxTexel = 2048; lineShift = 3; break; // RGBA
-    case 0x48: maxTexel = 2048; lineShift = 3; break; // CI
-    case 0x68: maxTexel = 4096; lineShift = 3; break; // IA
-    case 0x88: maxTexel = 4096; lineShift = 3; break; // I
-    // 16-bit
-    case 0x10: maxTexel = 2048; lineShift = 2; break; // RGBA
-    case 0x50: maxTexel = 2048; lineShift = 0; break; // CI
-    case 0x70: maxTexel = 2048; lineShift = 2; break; // IA
-    case 0x90: maxTexel = 2048; lineShift = 0; break; // I
-    // 32-bit
-    case 0x18: maxTexel = 1024; lineShift = 2; break; // RGBA
+    switch (fmtsiz) {
+    case imFmtSiz(G_IM_FMT.RGBA, G_IM_SIZ._16b):
+        maxTexel = 2048; lineShift = 2; break;
+    case imFmtSiz(G_IM_FMT.CI, G_IM_SIZ._4b):
+        maxTexel = 4096; lineShift = 4; break;
+    case imFmtSiz(G_IM_FMT.CI, G_IM_SIZ._8b):
+        maxTexel = 2048; lineShift = 3; break;
+    case imFmtSiz(G_IM_FMT.IA, G_IM_SIZ._16b):
+        maxTexel = 2048; lineShift = 2; break;
+    case imFmtSiz(G_IM_FMT.I, G_IM_SIZ._8b):
+        maxTexel = 4096; lineShift = 3; break;
+    // // 4-bit
+    // case 0x00: maxTexel = 4096; lineShift = 4; break; // RGBA
+    // case 0x40: maxTexel = 4096; lineShift = 4; break; // CI
+    // case 0x60: maxTexel = 8196; lineShift = 4; break; // IA
+    // case 0x80: maxTexel = 8196; lineShift = 4; break; // I
+    // // 8-bit
+    // case 0x08: maxTexel = 2048; lineShift = 3; break; // RGBA
+    // case 0x48: maxTexel = 2048; lineShift = 3; break; // CI
+    // case 0x68: maxTexel = 4096; lineShift = 3; break; // IA
+    // case 0x88: maxTexel = 4096; lineShift = 3; break; // I
+    // // 16-bit
+    // case 0x10: maxTexel = 2048; lineShift = 2; break; // RGBA
+    // case 0x50: maxTexel = 2048; lineShift = 0; break; // CI
+    // case 0x70: maxTexel = 2048; lineShift = 2; break; // IA
+    // case 0x90: maxTexel = 2048; lineShift = 0; break; // I
+    // // 32-bit
+    // case 0x18: maxTexel = 1024; lineShift = 2; break; // RGBA
     default:
-        throw "whoops";
+        console.error(`Unsupported texture format and size 0x${fmtsiz.toString(16)}`);
+        return {width: 8, height: 8}; // XXX: Return gibberish to get something on screen.
     }
 
-    const lineW = texture.lineSize << lineShift;
-    const tileW = texture.lrs - texture.uls + 1;
-    const tileH = texture.lrt - texture.ult + 1;
+    const lineW = tileParams.line << lineShift;
+    const tileW = tileParams.lrs - tileParams.uls + 1;
+    const tileH = tileParams.lrt - tileParams.ult + 1;
 
-    const maskW = 1 << texture.maskS;
-    const maskH = 1 << texture.maskT;
+    const maskW = 1 << tileParams.maskt;
+    const maskH = 1 << tileParams.maskt;
 
     let lineH;
     if (lineW > 0)
@@ -1145,7 +1183,7 @@ function calcTextureSize(texture: TextureTile) {
         lineH = 0;
 
     let width;
-    if (texture.maskS > 0 && (maskW * maskH) <= maxTexel)
+    if (tileParams.masks > 0 && (maskW * maskH) <= maxTexel)
         width = maskW;
     else if ((tileW * tileH) <= maxTexel)
         width = tileW;
@@ -1153,15 +1191,14 @@ function calcTextureSize(texture: TextureTile) {
         width = lineW;
 
     let height;
-    if (texture.maskT > 0 && (maskW * maskH) <= maxTexel)
+    if (tileParams.maskt > 0 && (maskW * maskH) <= maxTexel)
         height = maskH;
     else if ((tileW * tileH) <= maxTexel)
         height = tileH;
     else
         height = lineH;
 
-    texture.width = width;
-    texture.height = height;
+    return {width: width, height: height};
 }
 
 type CommandFunc = (state: State, w0: number, w1: number) => void;
@@ -1240,8 +1277,6 @@ export function readDL(gl: WebGL2RenderingContext, rom: ZELVIEW0.ZELVIEW0, banks
     state.vertexBuffer = new Float32Array(32 * VERTEX_SIZE);
     state.vertexData = [];
     state.vertexOffs = 0;
-
-    state.textureTiles = [];
 
     state.rom = rom;
     state.banks = banks;

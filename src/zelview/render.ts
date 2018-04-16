@@ -52,6 +52,14 @@ interface Combiner {
     add: number;
 }
 
+function usesTexel0(c: Combiner) {
+    return c.subA == 1 || c.subB == 1 || c.mul == 1 || c.add == 1;
+}
+
+function usesTexel1(c: Combiner) {
+    return c.subA == 2 || c.subB == 2 || c.mul == 2 || c.add == 2;
+}
+
 export interface Combiners {
     colorCombiners: ReadonlyArray<Readonly<Combiner>>;
     alphaCombiners: ReadonlyArray<Readonly<Combiner>>;
@@ -60,6 +68,30 @@ export interface Combiners {
 export interface F3DEX2ProgramParameters {
     use2Cycle: boolean;
     combiners: Combiners;
+}
+
+function checkCombiners(progParams: F3DEX2ProgramParameters, f: (c: Combiner) => boolean) {
+    if (f(progParams.combiners.colorCombiners[1]) ||
+        f(progParams.combiners.alphaCombiners[1])) {
+        return true;
+    }
+
+    if (progParams.use2Cycle) {
+        if (f(progParams.combiners.colorCombiners[0]) ||
+            f(progParams.combiners.alphaCombiners[0])) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+export function programParametersUsesTexel0(progParams: F3DEX2ProgramParameters) {
+    return checkCombiners(progParams, usesTexel0);
+}
+
+export function programParametersUsesTexel1(progParams: F3DEX2ProgramParameters) {
+    return checkCombiners(progParams, usesTexel1);
 }
 
 const F3DEX2_FRAG_BASE = `
