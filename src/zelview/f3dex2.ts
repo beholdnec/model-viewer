@@ -305,28 +305,6 @@ class State {
 
 type TextureDestFormat = "i8" | "i8_a8" | "rgba8";
 
-interface TextureTile {
-    width: number;
-    height: number;
-    pixels: Uint8Array;
-    addr: number;
-    format: number;
-    dstFormat: TextureDestFormat;
-
-    // XXX(jstpierre): Move somewhere else?
-    glTextureId: WebGLTexture;
-
-    tmem: number;
-
-    // Internal size data.
-    lrs: number; lrt: number;
-    uls: number; ult: number;
-    maskS: number; maskT: number; lineSize: number;
-
-    // wrap modes
-    cms: number; cmt: number;
-}
-
 // 3 pos + 2 uv + 4 color/nrm
 const VERTEX_SIZE = 9;
 const VERTEX_BYTES = VERTEX_SIZE * Float32Array.BYTES_PER_ELEMENT;
@@ -685,7 +663,8 @@ function cmd_SETTILE(state: State, w0: number, w1: number) {
     flushDraw(state);
 
     const tileIdx = extractBits(w1, 24, 3);
-    state.tileParams[tileIdx] = Object.freeze({
+    let oldTile = Object.assign({}, state.tileParams[tileIdx]);
+    state.tileParams[tileIdx] = Object.freeze(Object.assign(oldTile, {
         fmt: extractBits(w0, 21, 3),
         siz: extractBits(w0, 19, 2),
         line: extractBits(w0, 9, 9),
@@ -698,13 +677,8 @@ function cmd_SETTILE(state: State, w0: number, w1: number) {
         masks: extractBits(w1, 4, 4),
         shiftt: extractBits(w1, 10, 4),
         shifts: extractBits(w1, 0, 4),
-
-        // FIXME: are these params preserved?
-        uls: 0,
-        ult: 0,
-        lrs: 0,
-        lrt: 0,
-    });
+        // Preserve uls, ult, lrs, lrt
+    }));
 
     if (loggedsettile < 32) {
         console.log(`SETTILE ${JSON.stringify(state.tileParams[tileIdx], null, '\t')}`);
@@ -834,30 +808,6 @@ function cmd_LOADTLUT(state: State, w0: number, w1: number) {
     state.palettePixels = dst;
 }
 
-function tileCacheKey(state: State, tile: TextureTile) {
-    // XXX: Do we need more than this?
-    const srcOffs = state.lookupAddress(tile.addr);
-    return srcOffs;
-}
-
-// XXX: This is global to cut down on resources between DLs.
-// const tileCache = new Map<number, TextureTile>();
-// function loadTile(state: State, texture: TextureTile) {
-//     if (texture.glTextureId)
-//         return;
-
-//     const key = tileCacheKey(state, texture);
-//     const otherTile = tileCache.get(key);
-//     if (!otherTile) {
-//         const srcOffs = state.lookupAddress(texture.addr);
-//         loadTexture(state.gl, texture, state.rom.view, srcOffs, state.palettePixels);
-//         state.textures.push(textureToCanvas(texture));
-//         tileCache.set(key, texture);
-//     } else if (texture !== otherTile) {
-//         texture.glTextureId = otherTile.glTextureId;
-//     }
-// }
-
 interface ConvertResult {
     data: Uint8Array;
     glFormat: number;
@@ -887,7 +837,7 @@ function convert_CI4(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: num
         dst[i++] = palette[idx++];
     }
 
-    return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
+    return {data: dst, glFormat: gl.RGBA};
 }
 
 function convert_I4(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number): ConvertResult {
@@ -1018,42 +968,44 @@ function convert_IA16(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: nu
     return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
 }
 
-function textureToCanvas(texture: TextureTile): Viewer.Texture {
-    const canvas = document.createElement("canvas");
-    canvas.width = texture.width;
-    canvas.height = texture.height;
+// TODO: re-implement
 
-    const ctx = canvas.getContext("2d");
-    const imgData = ctx.createImageData(canvas.width, canvas.height);
+// function textureToCanvas(texture: TextureTile): Viewer.Texture {
+//     const canvas = document.createElement("canvas");
+//     canvas.width = texture.width;
+//     canvas.height = texture.height;
 
-    if (texture.dstFormat === "i8") {
-        for (let si = 0, di = 0; di < imgData.data.length; si++, di += 4) {
-            imgData.data[di + 0] = texture.pixels[si];
-            imgData.data[di + 1] = texture.pixels[si];
-            imgData.data[di + 2] = texture.pixels[si];
-            imgData.data[di + 3] = 255;
-        }
-    } else if (texture.dstFormat === "i8_a8") {
-        for (let si = 0, di = 0; di < imgData.data.length; si += 2, di += 4) {
-            imgData.data[di + 0] = texture.pixels[si];
-            imgData.data[di + 1] = texture.pixels[si];
-            imgData.data[di + 2] = texture.pixels[si];
-            imgData.data[di + 3] = texture.pixels[si + 1];
-        }
-    } else if (texture.dstFormat === "rgba8") {
-        imgData.data.set(texture.pixels);
-    }
+//     const ctx = canvas.getContext("2d");
+//     const imgData = ctx.createImageData(canvas.width, canvas.height);
 
-    try {
-        canvas.title = '0x' + texture.addr.toString(16) + '  ' + texture.format.toString(16) + '  ' + texture.dstFormat;
-    } catch (e) {
-        canvas.title = '(Malformed)'
-    }
-    ctx.putImageData(imgData, 0, 0);
+//     if (texture.dstFormat === "i8") {
+//         for (let si = 0, di = 0; di < imgData.data.length; si++, di += 4) {
+//             imgData.data[di + 0] = texture.pixels[si];
+//             imgData.data[di + 1] = texture.pixels[si];
+//             imgData.data[di + 2] = texture.pixels[si];
+//             imgData.data[di + 3] = 255;
+//         }
+//     } else if (texture.dstFormat === "i8_a8") {
+//         for (let si = 0, di = 0; di < imgData.data.length; si += 2, di += 4) {
+//             imgData.data[di + 0] = texture.pixels[si];
+//             imgData.data[di + 1] = texture.pixels[si];
+//             imgData.data[di + 2] = texture.pixels[si];
+//             imgData.data[di + 3] = texture.pixels[si + 1];
+//         }
+//     } else if (texture.dstFormat === "rgba8") {
+//         imgData.data.set(texture.pixels);
+//     }
 
-    const surfaces = [ canvas ];
-    return { name: canvas.title, surfaces };
-}
+//     try {
+//         canvas.title = '0x' + texture.addr.toString(16) + '  ' + texture.format.toString(16) + '  ' + texture.dstFormat;
+//     } catch (e) {
+//         canvas.title = '(Malformed)'
+//     }
+//     ctx.putImageData(imgData, 0, 0);
+
+//     const surfaces = [ canvas ];
+//     return { name: canvas.title, surfaces };
+// }
 
 const G_IM_FMT = {
     RGBA: 0,
@@ -1140,16 +1092,6 @@ function loadTexture(gl: WebGL2RenderingContext, tileParams: TileParams, src: Tm
     }
 
     return {glTextureId: texId, width: textureSize.width, height: textureSize.height};
-}
-
-function calcTextureDestFormat(texture: TextureTile): TextureDestFormat {
-    switch (texture.format & 0xE0) {
-    case 0x00: return "rgba8"; // RGBA
-    case 0x40: return "rgba8"; // CI -- XXX -- do we need to check the palette type?
-    case 0x60: return "i8_a8"; // IA
-    case 0x80: return "i8_a8"; // I
-    default: throw new Error("Invalid texture type");
-    }
 }
 
 interface TextureSize {
