@@ -131,7 +131,27 @@ interface LoadedTexture {
 }
 
 const TMEM_SIZE = 4096;
+const TMEM_ADDR_MASK = 0xFFF;
 const NUM_TILES = 8;
+
+// A special data view for TMEM that masks addresses so no accesses are out of bounds.
+class TmemDataView {
+    private tmem: Uint8Array = new Uint8Array(TMEM_SIZE);
+    private view: DataView;
+
+    constructor(tmem: Uint8Array) {
+        this.tmem = tmem;
+        this.view = new DataView(this.tmem.buffer);
+    }
+
+    public getUint8(offset: number) {
+        return this.view.getUint8(offset & TMEM_ADDR_MASK);
+    }
+
+    public getUint16(offset: number) {
+        return (this.getUint8(offset) << 8) | this.getUint8(offset + 1);
+    }
+}
 
 let loggedprogparams = 0;
 class State {
@@ -220,7 +240,7 @@ class State {
         let glTex0Dims = [1, 1];
         if (Render.programParametersUsesTexel0(progParams)) {
             let tileParams = this.tileParams[this.tex0TileNum];
-            const loaded = loadTexture(this.gl, tileParams, new DataView(this.tmem.buffer), tileParams.tmem, this.palettePixels);
+            const loaded = loadTexture(this.gl, tileParams, new TmemDataView(this.tmem), tileParams.tmem, this.palettePixels);
             glTex0 = loaded.glTextureId;
             glTex0Dims = [loaded.width, loaded.height];
         }
@@ -229,7 +249,7 @@ class State {
         let glTex1Dims = [1, 1];
         if (Render.programParametersUsesTexel1(progParams)) {
             let tileParams = this.tileParams[this.tex1TileNum];
-            const loaded = loadTexture(this.gl, tileParams, new DataView(this.tmem.buffer), tileParams.tmem, this.palettePixels);
+            const loaded = loadTexture(this.gl, tileParams, new TmemDataView(this.tmem), tileParams.tmem, this.palettePixels);
             glTex1 = loaded.glTextureId;
             glTex1Dims = [loaded.width, loaded.height];
         }
@@ -747,13 +767,11 @@ function cmd_LOADBLOCK(state: State, w0: number, w1: number) {
     const srcOffs = state.lookupAddress(state.timgParams.addr + params.ult * bpl + (params.uls << state.timgParams.siz >> 1));
     const dstOffs = tileParams.tmem;
     let numBytes = (params.lrs - params.uls + 1) << tileParams.siz >> 1;
-    if ((numBytes & 7) != 0) {
-        // Round up to next multiple of 8
-        numBytes = (numBytes & ~7) + 8;
-    }
+    // Round up to next multiple of 8
+    numBytes = (numBytes + 7) & ~7;
     for (let i = 0; i < numBytes; i++) {
         // TODO: blit
-        state.tmem[dstOffs + i] = state.rom.view.getUint8(srcOffs + i);
+        state.tmem[(dstOffs + i) & TMEM_ADDR_MASK] = state.rom.view.getUint8(srcOffs + i);
     }
 }
 
@@ -845,7 +863,7 @@ interface ConvertResult {
     glFormat: number;
 }
 
-function convert_CI4(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number, palette: Uint8Array): ConvertResult {
+function convert_CI4(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number, palette: Uint8Array): ConvertResult {
     if (!palette)
         return null;
 
@@ -869,10 +887,10 @@ function convert_CI4(gl: WebGL2RenderingContext, src: DataView, srcOffs: number,
         dst[i++] = palette[idx++];
     }
 
-    return {data: dst, glFormat: gl.RGBA};
+    return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
 }
 
-function convert_I4(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number): ConvertResult {
+function convert_I4(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number): ConvertResult {
     const nBytes = nTexels * 2;
     const dst = new Uint8Array(nBytes);
     let i = 0;
@@ -894,7 +912,7 @@ function convert_I4(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, 
     return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
 }
 
-function convert_IA4(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number): ConvertResult {
+function convert_IA4(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number): ConvertResult {
     const nBytes = nTexels * 2;
     const dst = new Uint8Array(nBytes);
 
@@ -914,10 +932,10 @@ function convert_IA4(gl: WebGL2RenderingContext, src: DataView, srcOffs: number,
         dst[i++] = (p & 0x01) ? 0xFF : 0x00;
     }
 
-    return {data: dst, glFormat: gl.RGBA};
+    return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
 }
 
-function convert_CI8(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number, palette: Uint8Array): ConvertResult {
+function convert_CI8(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number, palette: Uint8Array): ConvertResult {
     if (!palette)
         return null;
 
@@ -937,7 +955,7 @@ function convert_CI8(gl: WebGL2RenderingContext, src: DataView, srcOffs: number,
     return {data: dst, glFormat: gl.RGBA};
 }
 
-function convert_I8(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number): ConvertResult {
+function convert_I8(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number): ConvertResult {
     const nBytes = nTexels * 2;
     const dst = new Uint8Array(nBytes);
 
@@ -951,7 +969,7 @@ function convert_I8(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, 
     return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
 }
 
-function convert_IA8(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number): ConvertResult {
+function convert_IA8(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number): ConvertResult {
     const nBytes = nTexels * 2;
     const dst = new Uint8Array(nBytes);
 
@@ -969,16 +987,16 @@ function convert_IA8(gl: WebGL2RenderingContext, src: DataView, srcOffs: number,
         dst[i++] = p;
     }
 
-    return {data: dst, glFormat: gl.RGBA};
+    return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
 }
 
-function convert_RGBA16(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number): ConvertResult {
+function convert_RGBA16(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number): ConvertResult {
     const nBytes = nTexels * 4;
     const dst = new Uint8Array(nBytes);
 
     let i = 0;
     while (i < nBytes) {
-        const pixel = src.getUint16(srcOffs, false);
+        const pixel = src.getUint16(srcOffs);
         r5g5b5a1(dst, i, pixel);
         i += 4;
         srcOffs += 2;
@@ -987,7 +1005,7 @@ function convert_RGBA16(gl: WebGL2RenderingContext, src: DataView, srcOffs: numb
     return {data: dst, glFormat: gl.RGBA};
 }
 
-function convert_IA16(gl: WebGL2RenderingContext, src: DataView, srcOffs: number, nTexels: number): ConvertResult {
+function convert_IA16(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number): ConvertResult {
     const nBytes = nTexels * 2;
     const dst = new Uint8Array(nBytes);
 
@@ -1054,7 +1072,7 @@ function imFmtSiz(fmt: number, siz: number) {
     return (fmt << 4) | siz;
 }
 
-function loadTexture(gl: WebGL2RenderingContext, tileParams: TileParams, src: DataView, srcOffs: number, palette: Uint8Array): LoadedTexture {
+function loadTexture(gl: WebGL2RenderingContext, tileParams: TileParams, src: TmemDataView, srcOffs: number, palette: Uint8Array): LoadedTexture {
     const textureSize = calcTextureSize(tileParams);
 
     function convertTexturePixels(): ConvertResult {
@@ -1067,8 +1085,14 @@ function loadTexture(gl: WebGL2RenderingContext, tileParams: TileParams, src: Da
             return convert_CI4(gl, src, srcOffs, nTexels, palette);
         case imFmtSiz(G_IM_FMT.CI, G_IM_SIZ._8b):
             return convert_CI8(gl, src, srcOffs, nTexels, palette);
+        case imFmtSiz(G_IM_FMT.IA, G_IM_SIZ._4b):
+            return convert_IA4(gl, src, srcOffs, nTexels);
+        case imFmtSiz(G_IM_FMT.IA, G_IM_SIZ._8b):
+            return convert_IA8(gl, src, srcOffs, nTexels);
         case imFmtSiz(G_IM_FMT.IA, G_IM_SIZ._16b):
             return convert_IA16(gl, src, srcOffs, nTexels);
+        case imFmtSiz(G_IM_FMT.I, G_IM_SIZ._4b):
+            return convert_I4(gl, src, srcOffs, nTexels);
         case imFmtSiz(G_IM_FMT.I, G_IM_SIZ._8b):
             return convert_I8(gl, src, srcOffs, nTexels);
         // // 4-bit
@@ -1143,8 +1167,14 @@ function calcTextureSize(tileParams: TileParams): TextureSize {
         maxTexel = 4096; lineShift = 4; break;
     case imFmtSiz(G_IM_FMT.CI, G_IM_SIZ._8b):
         maxTexel = 2048; lineShift = 3; break;
+    case imFmtSiz(G_IM_FMT.IA, G_IM_SIZ._4b):
+        maxTexel = 8196; lineShift = 4; break;
+    case imFmtSiz(G_IM_FMT.IA, G_IM_SIZ._8b):
+        maxTexel = 4096; lineShift = 3; break;
     case imFmtSiz(G_IM_FMT.IA, G_IM_SIZ._16b):
         maxTexel = 2048; lineShift = 2; break;
+    case imFmtSiz(G_IM_FMT.I, G_IM_SIZ._4b):
+        maxTexel = 8196; lineShift = 4; break;
     case imFmtSiz(G_IM_FMT.I, G_IM_SIZ._8b):
         maxTexel = 4096; lineShift = 3; break;
     // // 4-bit
