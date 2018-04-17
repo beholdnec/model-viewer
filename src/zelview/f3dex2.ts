@@ -813,156 +813,181 @@ interface ConvertResult {
     glFormat: number;
 }
 
-function convert_CI4(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number, palette: Uint8Array): ConvertResult {
+function convert_CI4(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, srcStride: number, width: number, height: number, palette: Uint8Array): ConvertResult {
     if (!palette)
         return null;
 
-    const nBytes = nTexels * 4;
+    const nBytes = width * height * 4;
     const dst = new Uint8Array(nBytes);
     let i = 0;
-    while (i < nBytes) {
-        const b = src.getUint8(srcOffs++);
-        let idx;
-
-        idx = ((b & 0xF0) >> 4) * 4;
-        dst[i++] = palette[idx++];
-        dst[i++] = palette[idx++];
-        dst[i++] = palette[idx++];
-        dst[i++] = palette[idx++];
-
-        idx = (b & 0x0F) * 4;
-        dst[i++] = palette[idx++];
-        dst[i++] = palette[idx++];
-        dst[i++] = palette[idx++];
-        dst[i++] = palette[idx++];
+    for (let y = 0; y < height; y++) {
+        let lineOffs = srcOffs + y * srcStride;
+        for (let x = 0; x < width; x += 2) {
+            // FIXME: ensure decoding works correctly when width is odd.
+            const b = src.getUint8(lineOffs++);
+            let idx;
+    
+            idx = ((b & 0xF0) >> 4) * 4;
+            dst[i++] = palette[idx++];
+            dst[i++] = palette[idx++];
+            dst[i++] = palette[idx++];
+            dst[i++] = palette[idx++];
+    
+            idx = (b & 0x0F) * 4;
+            dst[i++] = palette[idx++];
+            dst[i++] = palette[idx++];
+            dst[i++] = palette[idx++];
+            dst[i++] = palette[idx++];
+        }
     }
 
     return {data: dst, glFormat: gl.RGBA};
 }
 
-function convert_I4(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number): ConvertResult {
-    const nBytes = nTexels * 2;
+function convert_I4(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, srcStride: number, width: number, height: number): ConvertResult {
+    const nBytes = width * height * 2;
     const dst = new Uint8Array(nBytes);
     let i = 0;
-    while (i < nBytes) {
-        const b = src.getUint8(srcOffs++);
+    for (let y = 0; y < height; y++) {
+        let lineOffs = srcOffs + y * srcStride;
+        for (let x = 0; x < width; x += 2) {
+            // FIXME: ensure decoding works correctly when width is odd.
+            const b = src.getUint8(lineOffs++);
 
-        let p;
-        p = (b & 0xF0) >> 4;
-        p = p << 4 | p;
-        dst[i++] = p;
-        dst[i++] = p;
-
-        p = (b & 0x0F);
-        p = p << 4 | p;
-        dst[i++] = p;
-        dst[i++] = p;
+            let p;
+            p = (b & 0xF0) >> 4;
+            p = p << 4 | p;
+            dst[i++] = p;
+            dst[i++] = p;
+    
+            p = (b & 0x0F);
+            p = p << 4 | p;
+            dst[i++] = p;
+            dst[i++] = p;
+        }
     }
 
     return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
 }
 
-function convert_IA4(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number): ConvertResult {
-    const nBytes = nTexels * 2;
+function convert_IA4(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, srcStride: number, width: number, height: number): ConvertResult {
+    const nBytes = width * height * 2;
     const dst = new Uint8Array(nBytes);
 
     let i = 0;
-    while (i < nBytes) {
-        const b = src.getUint8(srcOffs++);
-        let p; let pm;
-
-        p = (b & 0xF0) >> 4;
-        pm = p & 0x0E;
-        dst[i++] = (pm << 4 | pm);
-        dst[i++] = (p & 0x01) ? 0xFF : 0x00;
-
-        p = (b & 0x0F);
-        pm = p & 0x0E;
-        dst[i++] = (pm << 4 | pm);
-        dst[i++] = (p & 0x01) ? 0xFF : 0x00;
+    for (let y = 0; y < height; y++) {
+        let lineOffs = srcOffs + y * srcStride;
+        for (let x = 0; x < width; x++) {
+            const b = src.getUint8(lineOffs++);
+            let p; let pm;
+    
+            p = (b & 0xF0) >> 4;
+            pm = p & 0x0E;
+            dst[i++] = (pm << 4 | pm);
+            dst[i++] = (p & 0x01) ? 0xFF : 0x00;
+    
+            p = (b & 0x0F);
+            pm = p & 0x0E;
+            dst[i++] = (pm << 4 | pm);
+            dst[i++] = (p & 0x01) ? 0xFF : 0x00;
+        }
     }
 
     return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
 }
 
-function convert_CI8(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number, palette: Uint8Array): ConvertResult {
+function convert_CI8(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, srcStride: number, width: number, height: number, palette: Uint8Array): ConvertResult {
     if (!palette)
         return null;
 
-    const nBytes = nTexels * 4;
+    const nBytes = width * height * 4;
     const dst = new Uint8Array(nBytes);
 
     let i = 0;
-    while (i < nBytes) {
-        let idx = src.getUint8(srcOffs) * 4;
-        dst[i++] = palette[idx++];
-        dst[i++] = palette[idx++];
-        dst[i++] = palette[idx++];
-        dst[i++] = palette[idx++];
-        srcOffs++;
+    for (let y = 0; y < height; y++) {
+        let lineOffs = srcOffs + y * srcStride;
+        for (let x = 0; x < width; x++) {
+            let idx = src.getUint8(lineOffs++) * 4;
+            dst[i++] = palette[idx++];
+            dst[i++] = palette[idx++];
+            dst[i++] = palette[idx++];
+            dst[i++] = palette[idx++];
+        }
     }
 
     return {data: dst, glFormat: gl.RGBA};
 }
 
-function convert_I8(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number): ConvertResult {
-    const nBytes = nTexels * 2;
+function convert_I8(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, srcStride: number, width: number, height: number): ConvertResult {
+    const nBytes = width * height * 2;
     const dst = new Uint8Array(nBytes);
 
     let i = 0;
-    while (i < nBytes) {
-        const p = src.getUint8(srcOffs++);
-        dst[i++] = p;
-        dst[i++] = p;
+    for (let y = 0; y < height; y++) {
+        let lineOffs = srcOffs + y * srcStride;
+        for (let x = 0; x < width; x++) {
+            const p = src.getUint8(lineOffs++);
+            dst[i++] = p;
+            dst[i++] = p;
+        }
     }
 
     return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
 }
 
-function convert_IA8(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number): ConvertResult {
-    const nBytes = nTexels * 2;
+function convert_IA8(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, srcStride: number, width: number, height: number): ConvertResult {
+    const nBytes = width * height * 2;
     const dst = new Uint8Array(nBytes);
 
     let i = 0;
-    while (i < nBytes) {
-        const b = src.getUint8(srcOffs++);
-        let p;
-
-        p = (b & 0xF0) >> 4;
-        p = p << 4 | p;
-        dst[i++] = p;
-
-        p = (b & 0x0F);
-        p = p >> 4 | p;
-        dst[i++] = p;
+    for (let y = 0; y < height; y++) {
+        let lineOffs = srcOffs + y * srcStride;
+        for (let x = 0; x < width; x++) {
+            const b = src.getUint8(lineOffs++);
+            let p;
+    
+            p = (b & 0xF0) >> 4;
+            p = p << 4 | p;
+            dst[i++] = p;
+    
+            p = (b & 0x0F);
+            p = p >> 4 | p;
+            dst[i++] = p;
+        }
     }
 
     return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
 }
 
-function convert_RGBA16(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number): ConvertResult {
-    const nBytes = nTexels * 4;
+function convert_RGBA16(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, srcStride: number, width: number, height: number): ConvertResult {
+    const nBytes = width * height * 4;
     const dst = new Uint8Array(nBytes);
 
     let i = 0;
-    while (i < nBytes) {
-        const pixel = src.getUint16(srcOffs);
-        r5g5b5a1(dst, i, pixel);
-        i += 4;
-        srcOffs += 2;
+    for (let y = 0; y < height; y++) {
+        let lineOffs = srcOffs + y * srcStride;
+        for (let x = 0; x < width; x++) {
+            const pixel = src.getUint16(lineOffs);
+            r5g5b5a1(dst, i, pixel);
+            i += 4;
+            lineOffs += 2;
+        }
     }
 
     return {data: dst, glFormat: gl.RGBA};
 }
 
-function convert_IA16(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, nTexels: number): ConvertResult {
-    const nBytes = nTexels * 2;
+function convert_IA16(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: number, srcStride: number, width: number, height: number): ConvertResult {
+    const nBytes = width * height * 2;
     const dst = new Uint8Array(nBytes);
 
     let i = 0;
-    while (i < nBytes) {
-        dst[i++] = src.getUint8(srcOffs++);
-        dst[i++] = src.getUint8(srcOffs++);
+    for (let y = 0; y < height; y++) {
+        let lineOffs = srcOffs + y * srcStride;
+        for (let x = 0; x < width; x++) {
+            dst[i++] = src.getUint8(lineOffs++);
+            dst[i++] = src.getUint8(lineOffs++);
+        }
     }
 
     return {data: dst, glFormat: gl.LUMINANCE_ALPHA};
@@ -1026,27 +1051,27 @@ function imFmtSiz(fmt: number, siz: number) {
 
 function loadTexture(gl: WebGL2RenderingContext, tileParams: TileParams, src: TmemDataView, srcOffs: number, palette: Uint8Array): LoadedTexture {
     const textureSize = calcTextureSize(tileParams);
+    const srcStride = tileParams.line * 8;
 
     function convertTexturePixels(): ConvertResult {
-        const nTexels = textureSize.width * textureSize.height;
         const fmtsiz = imFmtSiz(tileParams.fmt, tileParams.siz);
         switch (fmtsiz) {
         case imFmtSiz(G_IM_FMT.RGBA, G_IM_SIZ._16b):
-            return convert_RGBA16(gl, src, srcOffs, nTexels);
+            return convert_RGBA16(gl, src, srcOffs, srcStride, textureSize.width, textureSize.height);
         case imFmtSiz(G_IM_FMT.CI, G_IM_SIZ._4b):
-            return convert_CI4(gl, src, srcOffs, nTexels, palette);
+            return convert_CI4(gl, src, srcOffs, srcStride, textureSize.width, textureSize.height, palette);
         case imFmtSiz(G_IM_FMT.CI, G_IM_SIZ._8b):
-            return convert_CI8(gl, src, srcOffs, nTexels, palette);
+            return convert_CI8(gl, src, srcOffs, srcStride, textureSize.width, textureSize.height, palette);
         case imFmtSiz(G_IM_FMT.IA, G_IM_SIZ._4b):
-            return convert_IA4(gl, src, srcOffs, nTexels);
+            return convert_IA4(gl, src, srcOffs, srcStride, textureSize.width, textureSize.height);
         case imFmtSiz(G_IM_FMT.IA, G_IM_SIZ._8b):
-            return convert_IA8(gl, src, srcOffs, nTexels);
+            return convert_IA8(gl, src, srcOffs, srcStride, textureSize.width, textureSize.height);
         case imFmtSiz(G_IM_FMT.IA, G_IM_SIZ._16b):
-            return convert_IA16(gl, src, srcOffs, nTexels);
+            return convert_IA16(gl, src, srcOffs, srcStride, textureSize.width, textureSize.height);
         case imFmtSiz(G_IM_FMT.I, G_IM_SIZ._4b):
-            return convert_I4(gl, src, srcOffs, nTexels);
+            return convert_I4(gl, src, srcOffs, srcStride, textureSize.width, textureSize.height);
         case imFmtSiz(G_IM_FMT.I, G_IM_SIZ._8b):
-            return convert_I8(gl, src, srcOffs, nTexels);
+            return convert_I8(gl, src, srcOffs, srcStride, textureSize.width, textureSize.height);
         // // 4-bit
         // case 0x40: return convert_CI4(gl, src, srcOffs, nTexels, palette);    // CI
         // case 0x60: return convert_IA4(gl, src, srcOffs, nTexels);    // IA
