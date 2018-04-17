@@ -98,6 +98,23 @@ const ACMUX = {
     _0: 7,
 };
 
+const G_IM_FMT = {
+    RGBA: 0,
+    CI: 2,
+    IA: 3,
+    I: 4,
+};
+
+const G_IM_SIZ = {
+    _4b: 0,
+    _8b: 1,
+    _16b: 2,
+};
+
+function imFmtSiz(fmt: number, siz: number) {
+    return (fmt << 4) | siz;
+}
+
 interface TImgParams {
     fmt: number;
     siz: number;
@@ -190,8 +207,8 @@ class State {
         // Fill tile parameters with default values.
         for (let i = 0; i < NUM_TILES; i++) {
             this.tileParams[i] = Object.freeze({
-                fmt: 0,
-                siz: 0,
+                fmt: G_IM_FMT.RGBA,
+                siz: G_IM_SIZ._16b,
                 line: 0,
                 tmem: 0,
                 palette: 0,
@@ -1031,23 +1048,6 @@ function convert_IA16(gl: WebGL2RenderingContext, src: TmemDataView, srcOffs: nu
 //     const surfaces = [ canvas ];
 //     return { name: canvas.title, surfaces };
 // }
-
-const G_IM_FMT = {
-    RGBA: 0,
-    CI: 2,
-    IA: 3,
-    I: 4,
-};
-
-const G_IM_SIZ = {
-    _4b: 0,
-    _8b: 1,
-    _16b: 2,
-};
-
-function imFmtSiz(fmt: number, siz: number) {
-    return (fmt << 4) | siz;
-}
 
 function loadTexture(gl: WebGL2RenderingContext, tileParams: TileParams, src: TmemDataView, srcOffs: number, palette: Uint8Array): LoadedTexture {
     const textureSize = calcTextureSize(tileParams);
