@@ -70,30 +70,6 @@ export interface F3DEX2ProgramParameters {
     combiners: Combiners;
 }
 
-function checkCombiners(progParams: F3DEX2ProgramParameters, f: (c: Combiner) => boolean) {
-    if (f(progParams.combiners.colorCombiners[1]) ||
-        f(progParams.combiners.alphaCombiners[1])) {
-        return true;
-    }
-
-    if (progParams.use2Cycle) {
-        if (f(progParams.combiners.colorCombiners[0]) ||
-            f(progParams.combiners.alphaCombiners[0])) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-export function programParametersUsesTexel0(progParams: F3DEX2ProgramParameters) {
-    return checkCombiners(progParams, usesTexel0);
-}
-
-export function programParametersUsesTexel1(progParams: F3DEX2ProgramParameters) {
-    return checkCombiners(progParams, usesTexel1);
-}
-
 const F3DEX2_FRAG_BASE = `
 precision mediump float;
 varying vec2 v_uv;

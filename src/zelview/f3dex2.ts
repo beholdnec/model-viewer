@@ -255,18 +255,20 @@ class State {
 
         let glTex0: WebGLTexture = null;
         let glTex0Dims = [1, 1];
-        if (Render.programParametersUsesTexel0(progParams)) {
+        const loadTex0 = true; // TODO: Load texture only if necessary
+        if (loadTex0) {
             let tileParams = this.tileParams[this.tex0TileNum];
-            const loaded = loadTexture(this.gl, tileParams, new TmemDataView(this.tmem), tileParams.tmem, this.palettePixels);
+            const loaded = loadTexture(this.gl, tileParams, new TmemDataView(this.tmem), tileParams.tmem * 8, this.palettePixels);
             glTex0 = loaded.glTextureId;
             glTex0Dims = [loaded.width, loaded.height];
         }
 
         let glTex1: WebGLTexture = null;
         let glTex1Dims = [1, 1];
-        if (Render.programParametersUsesTexel1(progParams)) {
+        const loadTex1 = true; // TODO: Load texture only if necessary
+        if (loadTex1) {
             let tileParams = this.tileParams[this.tex1TileNum];
-            const loaded = loadTexture(this.gl, tileParams, new TmemDataView(this.tmem), tileParams.tmem, this.palettePixels);
+            const loaded = loadTexture(this.gl, tileParams, new TmemDataView(this.tmem), tileParams.tmem * 8, this.palettePixels);
             glTex1 = loaded.glTextureId;
             glTex1Dims = [loaded.width, loaded.height];
         }
@@ -756,7 +758,7 @@ function cmd_LOADBLOCK(state: State, w0: number, w1: number) {
     // calculate bytes per line
     const bpl = state.timgParams.width << state.timgParams.siz >> 1;
     const srcOffs = state.lookupAddress(state.timgParams.addr + params.ult * bpl + (params.uls << state.timgParams.siz >> 1));
-    const dstOffs = tileParams.tmem;
+    const dstOffs = tileParams.tmem * 8;
     let numBytes = (params.lrs - params.uls + 1) << tileParams.siz >> 1;
     // Round up to next multiple of 8
     numBytes = (numBytes + 7) & ~7;
