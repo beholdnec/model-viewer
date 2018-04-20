@@ -311,10 +311,10 @@ class State {
 
             gl.activeTexture(gl.TEXTURE0);
             
-            const lighting = geometryMode & GeometryMode.LIGHTING;
-            //const useVertexColors = lighting ? 0 : 1;
-            // TODO: implement lighting
-            const useVertexColors = 1;
+            const lighting = !!(geometryMode & GeometryMode.LIGHTING);
+            // When lighting is disabled, the vertex colors are passed to the rasterizer as the SHADE attribute.
+            // When lighting is enabled, the vertex colors represent normals and SHADE is computed by the RSP.
+            const useVertexColors = lighting ? 0 : 1;
             gl.uniform1i(prog.useVertexColorsLocation, useVertexColors);
 
             gl.uniform1i(prog.alphaTestLocation, alphaTestMode);
