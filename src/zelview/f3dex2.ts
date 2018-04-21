@@ -193,8 +193,7 @@ class State {
     public combiners: Readonly<Render.Combiners>;
     public otherModeL: number = 0;
     public otherModeH: number = (CYCLETYPE._2CYCLE << OtherModeH.CYCLETYPE_SFT);
-    public tex0TileNum: number = 0;
-    public tex1TileNum: number = 1;
+    public texTileNum: ReadonlyArray<number> = [0, 1];
 
     public palettePixels: Uint8Array;
     public timgParams: Readonly<TImgParams>;
@@ -253,24 +252,14 @@ class State {
             combiners: this.combiners,
         });
 
-        let glTex0: WebGLTexture = null;
-        let glTex0Dims = [1, 1];
-        const loadTex0 = true; // TODO: Load texture only if necessary
-        if (loadTex0) {
-            let tileParams = this.tileParams[this.tex0TileNum];
+        let glTex: Array<WebGLTexture> = [null, null];
+        let glTexDims = [[1, 1], [1, 1]];
+        const loadTex: Array<boolean> = [true, true]; // TODO: Only load textures if necessary
+        for (let i = 0; i < 2; i++) {
+            const tileParams = this.tileParams[this.texTileNum[i]];
             const loaded = loadTexture(this.gl, tileParams, new TmemDataView(this.tmem), tileParams.tmem * 8, this.palettePixels);
-            glTex0 = loaded.glTextureId;
-            glTex0Dims = [loaded.width, loaded.height];
-        }
-
-        let glTex1: WebGLTexture = null;
-        let glTex1Dims = [1, 1];
-        const loadTex1 = true; // TODO: Load texture only if necessary
-        if (loadTex1) {
-            let tileParams = this.tileParams[this.tex1TileNum];
-            const loaded = loadTexture(this.gl, tileParams, new TmemDataView(this.tmem), tileParams.tmem * 8, this.palettePixels);
-            glTex1 = loaded.glTextureId;
-            glTex1Dims = [loaded.width, loaded.height];
+            glTex[i] = loaded.glTextureId;
+            glTexDims[i] = [loaded.width, loaded.height];
         }
         
         if (loggedprogparams < 32) {
@@ -301,13 +290,11 @@ class State {
             gl.uniform4fv(prog.envLocation, envColor);
             gl.uniform4fv(prog.primLocation, primColor);
 
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, glTex0);
-            gl.uniform2fv(prog.txsLocation[0], [1 / glTex0Dims[0], 1 / glTex0Dims[1]]);
-
-            gl.activeTexture(gl.TEXTURE1);
-            gl.bindTexture(gl.TEXTURE_2D, glTex1);
-            gl.uniform2fv(prog.txsLocation[1], [1 / glTex1Dims[0], 1 / glTex1Dims[1]]);
+            for (let i = 0; i < 2; i++) {
+                gl.activeTexture(gl.TEXTURE0 + i);
+                gl.bindTexture(gl.TEXTURE_2D, glTex[i]);
+                gl.uniform2fv(prog.txsLocation[i], [1 / glTexDims[i][0], 1 / glTexDims[i][1]]);
+            }
 
             gl.activeTexture(gl.TEXTURE0);
             
@@ -573,8 +560,10 @@ function cmd_TEXTURE(state: State, w0: number, w1: number) {
         loggedtexture++;
     }
 
-    state.tex0TileNum = params.tile;
-    state.tex1TileNum = (params.tile + 1) & 0x7;
+    state.texTileNum = [
+        params.tile,
+        (params.tile + 1) & 0x7,
+    ];
 }
 
 function r5g5b5a1(dst: Uint8Array, dstOffs: number, p: number) {
@@ -1172,7 +1161,7 @@ function calcTextureSize(tileParams: TileParams): TextureSize {
     const tileW = tileParams.lrs - tileParams.uls + 1;
     const tileH = tileParams.lrt - tileParams.ult + 1;
 
-    const maskW = 1 << tileParams.maskt;
+    const maskW = 1 << tileParams.masks;
     const maskH = 1 << tileParams.maskt;
 
     let lineH;
