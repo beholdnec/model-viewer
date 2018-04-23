@@ -252,14 +252,11 @@ class State {
             combiners: this.combiners,
         });
 
-        let glTex: Array<WebGLTexture> = [null, null];
-        let glTexDims = [[1, 1], [1, 1]];
         const loadTex: Array<boolean> = [true, true]; // TODO: Only load textures if necessary
+        let loadedTextures: Array<LoadedTexture> = [null, null];
         for (let i = 0; i < 2; i++) {
             const tileParams = this.tileParams[this.texTileNum[i]];
-            const loaded = loadTexture(this.gl, tileParams, new TmemDataView(this.tmem), tileParams.tmem * 8, this.palettePixels);
-            glTex[i] = loaded.glTextureId;
-            glTexDims[i] = [loaded.width, loaded.height];
+            loadedTextures[i] = loadTexture(this.gl, tileParams, new TmemDataView(this.tmem), tileParams.tmem * 8, this.palettePixels);
         }
         
         if (loggedprogparams < 32) {
@@ -292,8 +289,8 @@ class State {
 
             for (let i = 0; i < 2; i++) {
                 gl.activeTexture(gl.TEXTURE0 + i);
-                gl.bindTexture(gl.TEXTURE_2D, glTex[i]);
-                gl.uniform2fv(prog.txsLocation[i], [1 / glTexDims[i][0], 1 / glTexDims[i][1]]);
+                gl.bindTexture(gl.TEXTURE_2D, loadedTextures[i].glTextureId);
+                gl.uniform2fv(prog.txsLocation[i], [1 / loadedTextures[i].width, 1 / loadedTextures[i].height]);
             }
 
             gl.activeTexture(gl.TEXTURE0);
@@ -1080,9 +1077,7 @@ function loadTexture(gl: WebGL2RenderingContext, tileParams: TileParams, src: Tm
         }
     }
 
-    let converted = null;
-    if (srcOffs !== null)
-        converted = convertTexturePixels();
+    let converted = convertTexturePixels();
 
     function translateWrap(cm: number) {
         switch (cm) {
