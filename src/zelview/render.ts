@@ -92,8 +92,28 @@ vec4 n64Texture2D(sampler2D tex, vec2 texCoord) {
 }
 
 void main() {
+#if USE_2CYCLE && CC1_USES_T1
+    // 2-cycle, complete
     vec4 t0 = n64Texture2D(u_texture0, v_uv);
     vec4 t1 = n64Texture2D(u_texture1, v_uv);
+    vec4 tn = t0;
+#elif USE_2CYCLE && (CC0_USES_T1 || CC1_USES_T0)
+    // 2-cycle, no texel-next
+    vec4 t0 = n64Texture2D(u_texture1, v_uv); // FIXME: why reversed? this fixes shadow temple walls but breaks snow in the ice cavern!
+    vec4 t1 = n64Texture2D(u_texture0, v_uv);
+    vec4 tn = t1; // ???
+#elif USE_2CYCLE && (CC0_USES_T0 || CC0_USES_LOD_FRAC || CC1_USES_LOD_FRAC)
+    // 2-cycle, no texel 1
+    vec4 t0 = n64Texture2D(u_texture0, v_uv);
+    vec4 t1 = vec4(0.0);
+    vec4 tn = vec4(0.0); // ???
+#elif USE_2CYCLE
+    vec4 t0 = vec4(0.0);
+    vec4 t1 = vec4(0.0);
+    vec4 tn = vec4(0.0);
+#else
+    #error TODO: handle 1-cycle
+#endif
 
     vec4 shade = v_shade;
     if (!u_useVertexColors) {
@@ -104,6 +124,8 @@ void main() {
 #if USE_2CYCLE
     combined.rgb = (CC0_SUBA - CC0_SUBB) * CC0_MUL + CC0_ADD;
     combined.a = (AC0_SUBA - AC0_SUBB) * AC0_MUL + AC0_ADD;
+    t0 = t1;
+    t1 = tn;
 #endif
     combined.rgb = (CC1_SUBA - CC1_SUBB) * CC1_MUL + CC1_ADD;
     combined.a = (AC1_SUBA - AC1_SUBB) * AC1_MUL + AC1_ADD;
@@ -209,7 +231,13 @@ export class F3DEX2Program extends Program {
         this.frag = `#define USE_2CYCLE ${params.use2Cycle ? 1 : 0}\n`;
 
         for (let i = 0; i < 2; i++) {
+            const usesT0 = usesTexel0(params.combiners.colorCombiners[i]) || usesTexel0(params.combiners.alphaCombiners[i]);
+            const usesT1 = usesTexel1(params.combiners.colorCombiners[i]) || usesTexel1(params.combiners.alphaCombiners[i]);
+            const usesLodFrac = params.combiners.colorCombiners[i].mul == 13 || params.combiners.alphaCombiners[i].mul == 0;
             this.frag += `
+#define CC${i}_USES_T0 ${usesT0 ? 1 : 0}
+#define CC${i}_USES_T1 ${usesT1 ? 1 : 0}
+#define CC${i}_USES_LOD_FRAC ${usesLodFrac ? 1 : 0}
 #define CC${i}_SUBA ${getOrDefault(CC_SUBA, params.combiners.colorCombiners[i].subA, 'vec3(0.0)')}
 #define CC${i}_SUBB ${getOrDefault(CC_SUBB, params.combiners.colorCombiners[i].subB, 'vec3(0.0)')}
 #define CC${i}_MUL ${getOrDefault(CC_MUL, params.combiners.colorCombiners[i].mul, 'vec3(0.0)')}
