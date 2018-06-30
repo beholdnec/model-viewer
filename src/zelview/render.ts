@@ -9,7 +9,6 @@ import { fetch } from '../util';
 
 import * as Viewer from '../viewer';
 import ArrayBufferSlice from 'ArrayBufferSlice';
-import { PrimitiveType } from '../gx/gx_enum';
 
 export type RenderFunc = (renderState: RenderState) => void;
 

@@ -4,6 +4,7 @@
   "devDependencies": {
     "gl-matrix": "^2.4.0",
     "pako": "^1.0.6",
+    "typescript": "^2.9.2",
     "wabt": "^1.0.0-nightly.20180421"
   },
   "dependencies": {
