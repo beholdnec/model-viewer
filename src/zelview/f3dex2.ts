@@ -187,7 +187,8 @@ class State {
     public vertexOffs: number;
 
     public primColor: vec4 = vec4.clone([1, 1, 1, 1]);
-    public envColor: vec4 = vec4.clone([1, 1, 1, 1]);
+    // FIXME: Initial envColor depends on which map is loaded, and is possibly animated?
+    public envColor: vec4 = vec4.clone([0, 0, 0, 0.5]);
 
     public geometryMode: number = 0;
     public combiners: Readonly<Render.Combiners>;

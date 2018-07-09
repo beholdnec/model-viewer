@@ -51,11 +51,19 @@ interface Combiner {
     add: number;
 }
 
-function usesTexel0(c: Combiner) {
+function ccUsesTexel0(c: Combiner) {
+    return c.subA == 1 || c.subB == 1 || c.mul == 1 || c.mul == 8 || c.add == 1;
+}
+
+function acUsesTexel0(c: Combiner) {
     return c.subA == 1 || c.subB == 1 || c.mul == 1 || c.add == 1;
 }
 
-function usesTexel1(c: Combiner) {
+function ccUsesTexel1(c: Combiner) {
+    return c.subA == 2 || c.subB == 2 || c.mul == 2 || c.mul == 9 || c.add == 2;
+}
+
+function acUsesTexel1(c: Combiner) {
     return c.subA == 2 || c.subB == 2 || c.mul == 2 || c.add == 2;
 }
 
@@ -93,23 +101,27 @@ vec4 n64Texture2D(sampler2D tex, vec2 texCoord) {
 void main() {
 #if USE_2CYCLE && CC1_USES_T1
     // 2-cycle, complete
-    vec4 t0 = n64Texture2D(u_texture0, v_uv);
-    vec4 t1 = n64Texture2D(u_texture1, v_uv);
-    vec4 tn = t0;
+    vec4 t00 = n64Texture2D(u_texture0, v_uv);
+    vec4 t10 = n64Texture2D(u_texture1, v_uv);
+    vec4 t01 = t00; // ???
+    vec4 t11 = t10; // ???
 #elif USE_2CYCLE && (CC0_USES_T1 || CC1_USES_T0)
-    // 2-cycle, no texel-next
-    vec4 t0 = n64Texture2D(u_texture1, v_uv); // FIXME: why reversed? this fixes shadow temple walls but breaks snow in the ice cavern!
-    vec4 t1 = n64Texture2D(u_texture0, v_uv);
-    vec4 tn = t1; // ???
+    // 2-cycle, no texel-next?
+    vec4 t00 = n64Texture2D(u_texture0, v_uv);
+    vec4 t10 = n64Texture2D(u_texture1, v_uv);
+    vec4 t01 = n64Texture2D(u_texture0, v_uv); // ???
+    vec4 t11 = n64Texture2D(u_texture1, v_uv); // ???
 #elif USE_2CYCLE && (CC0_USES_T0 || CC0_USES_LOD_FRAC || CC1_USES_LOD_FRAC)
     // 2-cycle, no texel 1
-    vec4 t0 = n64Texture2D(u_texture0, v_uv);
-    vec4 t1 = vec4(0.0);
-    vec4 tn = vec4(0.0); // ???
+    vec4 t00 = n64Texture2D(u_texture0, v_uv);
+    vec4 t10 = vec4(0.0);
+    vec4 t01 = t00; // ???
+    vec4 t11 = t10; // ???
 #elif USE_2CYCLE
-    vec4 t0 = vec4(0.0);
-    vec4 t1 = vec4(0.0);
-    vec4 tn = vec4(0.0);
+    vec4 t00 = vec4(0.0);
+    vec4 t10 = vec4(0.0);
+    vec4 t01 = vec4(0.0);
+    vec4 t11 = vec4(0.0);
 #else
     #error TODO: handle 1-cycle
 #endif
@@ -119,15 +131,23 @@ void main() {
         shade = vec4(1.0);
     }
 
-    vec4 combined = vec4(0.0);
+    vec4 combined = shade;
+    vec4 t0;
+    vec4 t1;
 #if USE_2CYCLE
-    combined.rgb = (CC0_SUBA - CC0_SUBB) * CC0_MUL + CC0_ADD;
-    combined.a = (AC0_SUBA - AC0_SUBB) * AC0_MUL + AC0_ADD;
-    t0 = t1;
-    t1 = tn;
+    t0 = t00;
+    t1 = t10;
+    combined = vec4(
+        (CC0_SUBA - CC0_SUBB) * CC0_MUL + CC0_ADD,
+        (AC0_SUBA - AC0_SUBB) * AC0_MUL + AC0_ADD
+    );
 #endif
-    combined.rgb = (CC1_SUBA - CC1_SUBB) * CC1_MUL + CC1_ADD;
-    combined.a = (AC1_SUBA - AC1_SUBB) * AC1_MUL + AC1_ADD;
+    t0 = t01;
+    t1 = t11;
+    combined = vec4(
+        (CC1_SUBA - CC1_SUBB) * CC1_MUL + CC1_ADD,
+        (AC1_SUBA - AC1_SUBB) * AC1_MUL + AC1_ADD
+    );
 
     gl_FragColor = combined;
 
@@ -230,8 +250,8 @@ export class F3DEX2Program extends Program {
         this.frag = `#define USE_2CYCLE ${params.use2Cycle ? 1 : 0}\n`;
 
         for (let i = 0; i < 2; i++) {
-            const usesT0 = usesTexel0(params.combiners.colorCombiners[i]) || usesTexel0(params.combiners.alphaCombiners[i]);
-            const usesT1 = usesTexel1(params.combiners.colorCombiners[i]) || usesTexel1(params.combiners.alphaCombiners[i]);
+            const usesT0 = ccUsesTexel0(params.combiners.colorCombiners[i]) || acUsesTexel0(params.combiners.alphaCombiners[i]);
+            const usesT1 = ccUsesTexel1(params.combiners.colorCombiners[i]) || acUsesTexel1(params.combiners.alphaCombiners[i]);
             const usesLodFrac = params.combiners.colorCombiners[i].mul == 13 || params.combiners.alphaCombiners[i].mul == 0;
             this.frag += `
 #define CC${i}_USES_T0 ${usesT0 ? 1 : 0}

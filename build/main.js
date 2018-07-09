@@ -12250,7 +12250,8 @@ System.register("zelview/f3dex2", ["gl-matrix", "zelview/render", "render"], fun
                     this.programMap = {};
                     this.tmem = new Uint8Array(TMEM_SIZE);
                     this.primColor = gl_matrix_11.vec4.clone([1, 1, 1, 1]);
-                    this.envColor = gl_matrix_11.vec4.clone([1, 1, 1, 1]);
+                    // FIXME: Initial envColor depends on which map is loaded, and is possibly animated?
+                    this.envColor = gl_matrix_11.vec4.clone([0, 0, 0, 0.5]);
                     this.geometryMode = 0;
                     this.otherModeL = 0;
                     this.otherModeH = (CYCLETYPE._2CYCLE << OtherModeH.CYCLETYPE_SFT);
@@ -12425,10 +12426,16 @@ System.register("zelview/render", ["zelview/zelview0", "render", "Program", "uti
     "use strict";
     var ZELVIEW0, render_18, Program_7, util_27, BillboardBGProgram, F3DEX2_FRAG_BASE, CC_SUBA, CC_SUBB, CC_MUL, CC_ADD, AC_ADDSUB, AC_MUL, F3DEX2Program, CollisionProgram, WaterboxProgram, Scene, SceneDesc;
     var __moduleName = context_46 && context_46.id;
-    function usesTexel0(c) {
+    function ccUsesTexel0(c) {
+        return c.subA == 1 || c.subB == 1 || c.mul == 1 || c.mul == 8 || c.add == 1;
+    }
+    function acUsesTexel0(c) {
         return c.subA == 1 || c.subB == 1 || c.mul == 1 || c.add == 1;
     }
-    function usesTexel1(c) {
+    function ccUsesTexel1(c) {
+        return c.subA == 2 || c.subB == 2 || c.mul == 2 || c.mul == 9 || c.add == 2;
+    }
+    function acUsesTexel1(c) {
         return c.subA == 2 || c.subB == 2 || c.mul == 2 || c.add == 2;
     }
     function getOrDefault(obj, key, def) {
@@ -12471,7 +12478,7 @@ System.register("zelview/render", ["zelview/zelview0", "render", "Program", "uti
                 return BillboardBGProgram;
             }(Program_7.default));
             exports_46("BillboardBGProgram", BillboardBGProgram);
-            F3DEX2_FRAG_BASE = "\nprecision mediump float;\nvarying vec2 v_uv;\nvarying vec4 v_shade;\nuniform vec4 u_env;\nuniform vec4 u_prim;\nuniform sampler2D u_texture0;\nuniform sampler2D u_texture1;\nuniform bool u_useVertexColors;\nuniform int u_alphaTest;\n\nvec4 n64Texture2D(sampler2D tex, vec2 texCoord) {\n    vec2 texSize = vec2(textureSize(tex, 0));\n    vec2 offset = fract(texCoord * texSize - 0.5);\n    offset -= step(1.0, offset.x + offset.y);\n    vec4 c0 = texture2D(tex, texCoord - offset / texSize, 0.0);\n    vec4 c1 = texture2D(tex, texCoord - vec2(offset.x - sign(offset.x), offset.y) / texSize, 0.0);\n    vec4 c2 = texture2D(tex, texCoord - vec2(offset.x, offset.y - sign(offset.y)) / texSize, 0.0);\n    return c0 + abs(offset.x) * (c1 - c0) + abs(offset.y) * (c2 - c0);\t\t\n}\n\nvoid main() {\n#if USE_2CYCLE && CC1_USES_T1\n    // 2-cycle, complete\n    vec4 t0 = n64Texture2D(u_texture0, v_uv);\n    vec4 t1 = n64Texture2D(u_texture1, v_uv);\n    vec4 tn = t0;\n#elif USE_2CYCLE && (CC0_USES_T1 || CC1_USES_T0)\n    // 2-cycle, no texel-next\n    vec4 t0 = n64Texture2D(u_texture1, v_uv); // FIXME: why reversed? this fixes shadow temple walls but breaks snow in the ice cavern!\n    vec4 t1 = n64Texture2D(u_texture0, v_uv);\n    vec4 tn = t1; // ???\n#elif USE_2CYCLE && (CC0_USES_T0 || CC0_USES_LOD_FRAC || CC1_USES_LOD_FRAC)\n    // 2-cycle, no texel 1\n    vec4 t0 = n64Texture2D(u_texture0, v_uv);\n    vec4 t1 = vec4(0.0);\n    vec4 tn = vec4(0.0); // ???\n#elif USE_2CYCLE\n    vec4 t0 = vec4(0.0);\n    vec4 t1 = vec4(0.0);\n    vec4 tn = vec4(0.0);\n#else\n    #error TODO: handle 1-cycle\n#endif\n\n    vec4 shade = v_shade;\n    if (!u_useVertexColors) {\n        shade = vec4(1.0);\n    }\n\n    vec4 combined = vec4(0.0);\n#if USE_2CYCLE\n    combined.rgb = (CC0_SUBA - CC0_SUBB) * CC0_MUL + CC0_ADD;\n    combined.a = (AC0_SUBA - AC0_SUBB) * AC0_MUL + AC0_ADD;\n    t0 = t1;\n    t1 = tn;\n#endif\n    combined.rgb = (CC1_SUBA - CC1_SUBB) * CC1_MUL + CC1_ADD;\n    combined.a = (AC1_SUBA - AC1_SUBB) * AC1_MUL + AC1_ADD;\n\n    gl_FragColor = combined;\n\n    if (u_alphaTest > 0 && gl_FragColor.a < 0.0125)\n        discard;\n}\n";
+            F3DEX2_FRAG_BASE = "\nprecision mediump float;\nvarying vec2 v_uv;\nvarying vec4 v_shade;\nuniform vec4 u_env;\nuniform vec4 u_prim;\nuniform sampler2D u_texture0;\nuniform sampler2D u_texture1;\nuniform bool u_useVertexColors;\nuniform int u_alphaTest;\n\nvec4 n64Texture2D(sampler2D tex, vec2 texCoord) {\n    vec2 texSize = vec2(textureSize(tex, 0));\n    vec2 offset = fract(texCoord * texSize - 0.5);\n    offset -= step(1.0, offset.x + offset.y);\n    vec4 c0 = texture2D(tex, texCoord - offset / texSize, 0.0);\n    vec4 c1 = texture2D(tex, texCoord - vec2(offset.x - sign(offset.x), offset.y) / texSize, 0.0);\n    vec4 c2 = texture2D(tex, texCoord - vec2(offset.x, offset.y - sign(offset.y)) / texSize, 0.0);\n    return c0 + abs(offset.x) * (c1 - c0) + abs(offset.y) * (c2 - c0);\t\t\n}\n\nvoid main() {\n#if USE_2CYCLE && CC1_USES_T1\n    // 2-cycle, complete\n    vec4 t00 = n64Texture2D(u_texture0, v_uv);\n    vec4 t10 = n64Texture2D(u_texture1, v_uv);\n    vec4 t01 = t00; // ???\n    vec4 t11 = t10; // ???\n#elif USE_2CYCLE && (CC0_USES_T1 || CC1_USES_T0)\n    // 2-cycle, no texel-next?\n    vec4 t00 = n64Texture2D(u_texture0, v_uv);\n    vec4 t10 = n64Texture2D(u_texture1, v_uv);\n    vec4 t01 = n64Texture2D(u_texture0, v_uv); // ???\n    vec4 t11 = n64Texture2D(u_texture1, v_uv); // ???\n#elif USE_2CYCLE && (CC0_USES_T0 || CC0_USES_LOD_FRAC || CC1_USES_LOD_FRAC)\n    // 2-cycle, no texel 1\n    vec4 t00 = n64Texture2D(u_texture0, v_uv);\n    vec4 t10 = vec4(0.0);\n    vec4 t01 = t00; // ???\n    vec4 t11 = t10; // ???\n#elif USE_2CYCLE\n    vec4 t00 = vec4(0.0);\n    vec4 t10 = vec4(0.0);\n    vec4 t01 = vec4(0.0);\n    vec4 t11 = vec4(0.0);\n#else\n    #error TODO: handle 1-cycle\n#endif\n\n    vec4 shade = v_shade;\n    if (!u_useVertexColors) {\n        shade = vec4(1.0);\n    }\n\n    vec4 combined = shade;\n    vec4 t0;\n    vec4 t1;\n#if USE_2CYCLE\n    t0 = t00;\n    t1 = t10;\n    combined = vec4(\n        (CC0_SUBA - CC0_SUBB) * CC0_MUL + CC0_ADD,\n        (AC0_SUBA - AC0_SUBB) * AC0_MUL + AC0_ADD\n    );\n#endif\n    t0 = t01;\n    t1 = t11;\n    combined = vec4(\n        (CC1_SUBA - CC1_SUBB) * CC1_MUL + CC1_ADD,\n        (AC1_SUBA - AC1_SUBB) * AC1_MUL + AC1_ADD\n    );\n\n    gl_FragColor = combined;\n\n    if (u_alphaTest > 0 && gl_FragColor.a < 0.0125)\n        discard;\n}\n";
             CC_SUBA = {
                 0: "combined.rgb",
                 1: "t0.rgb",
@@ -12545,8 +12552,8 @@ System.register("zelview/render", ["zelview/zelview0", "render", "Program", "uti
                     _this.frag = "\n#error Shader was not properly constructed.\n";
                     _this.frag = "#define USE_2CYCLE " + (params.use2Cycle ? 1 : 0) + "\n";
                     for (var i = 0; i < 2; i++) {
-                        var usesT0 = usesTexel0(params.combiners.colorCombiners[i]) || usesTexel0(params.combiners.alphaCombiners[i]);
-                        var usesT1 = usesTexel1(params.combiners.colorCombiners[i]) || usesTexel1(params.combiners.alphaCombiners[i]);
+                        var usesT0 = ccUsesTexel0(params.combiners.colorCombiners[i]) || acUsesTexel0(params.combiners.alphaCombiners[i]);
+                        var usesT1 = ccUsesTexel1(params.combiners.colorCombiners[i]) || acUsesTexel1(params.combiners.alphaCombiners[i]);
                         var usesLodFrac = params.combiners.colorCombiners[i].mul == 13 || params.combiners.alphaCombiners[i].mul == 0;
                         _this.frag += "\n#define CC" + i + "_USES_T0 " + (usesT0 ? 1 : 0) + "\n#define CC" + i + "_USES_T1 " + (usesT1 ? 1 : 0) + "\n#define CC" + i + "_USES_LOD_FRAC " + (usesLodFrac ? 1 : 0) + "\n#define CC" + i + "_SUBA " + getOrDefault(CC_SUBA, params.combiners.colorCombiners[i].subA, 'vec3(0.0)') + "\n#define CC" + i + "_SUBB " + getOrDefault(CC_SUBB, params.combiners.colorCombiners[i].subB, 'vec3(0.0)') + "\n#define CC" + i + "_MUL " + getOrDefault(CC_MUL, params.combiners.colorCombiners[i].mul, 'vec3(0.0)') + "\n#define CC" + i + "_ADD " + getOrDefault(CC_ADD, params.combiners.colorCombiners[i].add, 'vec3(0.0)') + "\n#define AC" + i + "_SUBA " + getOrDefault(AC_ADDSUB, params.combiners.alphaCombiners[i].subA, '0.0') + "\n#define AC" + i + "_SUBB " + getOrDefault(AC_ADDSUB, params.combiners.alphaCombiners[i].subB, '0.0') + "\n#define AC" + i + "_MUL " + getOrDefault(AC_MUL, params.combiners.alphaCombiners[i].mul, '0.0') + "\n#define AC" + i + "_ADD " + getOrDefault(AC_ADDSUB, params.combiners.alphaCombiners[i].add, '0.0') + "\n";
                     }
