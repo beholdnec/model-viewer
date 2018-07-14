@@ -48,6 +48,7 @@ var __assign = (this && this.__assign) || Object.assign || function(t) {
 };
 System.register("Progressable", [], function (exports_1, context_1) {
     "use strict";
+    var Progressable;
     var __moduleName = context_1 && context_1.id;
     function avg(L) {
         var s = 0;
@@ -73,7 +74,6 @@ System.register("Progressable", [], function (exports_1, context_1) {
         tick();
         return pr;
     }
-    var Progressable;
     return {
         setters: [],
         execute: function () {
@@ -120,6 +120,7 @@ System.register("Progressable", [], function (exports_1, context_1) {
 });
 System.register("util", ["ArrayBufferSlice", "Progressable"], function (exports_2, context_2) {
     "use strict";
+    var ArrayBufferSlice_1, Progressable_1, counter;
     var __moduleName = context_2 && context_2.id;
     function fetch(path) {
         var request = new XMLHttpRequest();
@@ -226,7 +227,6 @@ System.register("util", ["ArrayBufferSlice", "Progressable"], function (exports_
         console.log(S);
     }
     exports_2("hexdump", hexdump);
-    var ArrayBufferSlice_1, Progressable_1, counter;
     return {
         setters: [
             function (ArrayBufferSlice_1_1) {
@@ -244,12 +244,12 @@ System.register("util", ["ArrayBufferSlice", "Progressable"], function (exports_
 });
 System.register("endian", [], function (exports_3, context_3) {
     "use strict";
+    var test, testView, systemEndianness;
     var __moduleName = context_3 && context_3.id;
     function getSystemEndianness() {
         return systemEndianness;
     }
     exports_3("getSystemEndianness", getSystemEndianness);
-    var test, testView, systemEndianness;
     return {
         setters: [],
         execute: function () {
@@ -261,11 +261,11 @@ System.register("endian", [], function (exports_3, context_3) {
 });
 System.register("ArrayBufferSlice", ["util", "endian"], function (exports_4, context_4) {
     "use strict";
+    var util_1, endian_1, ArrayBuffer_slice, ArrayBufferSlice;
     var __moduleName = context_4 && context_4.id;
     function isAligned(n, m) {
         return (n & (m - 1)) === 0;
     }
-    var util_1, endian_1, ArrayBuffer_slice, ArrayBufferSlice;
     return {
         setters: [
             function (util_1_1) {
@@ -420,8 +420,10 @@ System.register("ArrayBufferSlice", ["util", "endian"], function (exports_4, con
 // Helper utility to combine buffers together for performance reasons.
 System.register("BufferCoalescer", ["util"], function (exports_5, context_5) {
     "use strict";
+    var util_2, FakeBufferCoalescer, BufferCoalescer;
     var __moduleName = context_5 && context_5.id;
     function coalesceBuffer(gl, target, datas) {
+        var e_1, _a, e_2, _b;
         var dataLength = 0;
         try {
             for (var datas_1 = __values(datas), datas_1_1 = datas_1.next(); !datas_1_1.done; datas_1_1 = datas_1.next()) {
@@ -460,10 +462,8 @@ System.register("BufferCoalescer", ["util"], function (exports_5, context_5) {
             finally { if (e_2) throw e_2.error; }
         }
         return coalescedBuffers;
-        var e_1, _a, e_2, _b;
     }
     exports_5("coalesceBuffer", coalesceBuffer);
-    var util_2, FakeBufferCoalescer, BufferCoalescer;
     return {
         setters: [
             function (util_2_1) {
@@ -490,33 +490,33 @@ System.register("BufferCoalescer", ["util"], function (exports_5, context_5) {
                     this.coalescedBuffers = coalescedBuffers;
                 }
                 FakeBufferCoalescer.prototype.destroy = function (gl) {
+                    var e_3, _a, e_4, _b;
                     try {
-                        for (var _a = __values(this.vertexBuffers), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var vertexBuffer = _b.value;
+                        for (var _c = __values(this.vertexBuffers), _d = _c.next(); !_d.done; _d = _c.next()) {
+                            var vertexBuffer = _d.value;
                             gl.deleteBuffer(vertexBuffer);
                         }
                     }
                     catch (e_3_1) { e_3 = { error: e_3_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                         }
                         finally { if (e_3) throw e_3.error; }
                     }
                     try {
-                        for (var _d = __values(this.indexBuffers), _e = _d.next(); !_e.done; _e = _d.next()) {
-                            var indexBuffer = _e.value;
+                        for (var _e = __values(this.indexBuffers), _f = _e.next(); !_f.done; _f = _e.next()) {
+                            var indexBuffer = _f.value;
                             gl.deleteBuffer(indexBuffer);
                         }
                     }
                     catch (e_4_1) { e_4 = { error: e_4_1 }; }
                     finally {
                         try {
-                            if (_e && !_e.done && (_f = _d.return)) _f.call(_d);
+                            if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                         }
                         finally { if (e_4) throw e_4.error; }
                     }
-                    var e_3, _c, e_4, _f;
                 };
                 return FakeBufferCoalescer;
             }());
@@ -555,8 +555,8 @@ System.register("BufferCoalescer", ["util"], function (exports_5, context_5) {
 });
 System.register("InputManager", [], function (exports_6, context_6) {
     "use strict";
-    var __moduleName = context_6 && context_6.id;
     var InputManager;
+    var __moduleName = context_6 && context_6.id;
     return {
         setters: [],
         execute: function () {
@@ -641,6 +641,7 @@ System.register("InputManager", [], function (exports_6, context_6) {
 });
 System.register("Camera", ["gl-matrix", "util"], function (exports_7, context_7) {
     "use strict";
+    var gl_matrix_1, util_3, Plane, scratchVec3a, scratchVec3b, scratchVec3c, scratchVec3d, AABB, FrustumVisualizer, IntersectionState, Frustum, Camera, FPSCameraController, OrbitCameraController;
     var __moduleName = context_7 && context_7.id;
     function computeViewMatrix(out, camera) {
         gl_matrix_1.mat4.copy(out, camera.viewMatrix);
@@ -731,7 +732,6 @@ System.register("Camera", ["gl-matrix", "util"], function (exports_7, context_7)
         dst[15] = 9999.0;
     }
     exports_7("texEnvMtx", texEnvMtx);
-    var gl_matrix_1, util_3, Plane, scratchVec3a, scratchVec3b, scratchVec3c, scratchVec3d, AABB, FrustumVisualizer, IntersectionState, Frustum, Camera, FPSCameraController, OrbitCameraController;
     return {
         setters: [
             function (gl_matrix_1_1) {
@@ -1216,6 +1216,7 @@ System.register("Camera", ["gl-matrix", "util"], function (exports_7, context_7)
 });
 System.register("CodeEditor", [], function (exports_8, context_8) {
     "use strict";
+    var MONOSPACE, CursorOverride, NumberDragger, CodeEditor;
     var __moduleName = context_8 && context_8.id;
     function visibleRAF(elem, func) {
         var window = elem.ownerDocument.defaultView;
@@ -1289,7 +1290,6 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     return y;
         throw new Error('wtf');
     }
-    var MONOSPACE, CursorOverride, NumberDragger, CodeEditor;
     return {
         setters: [],
         execute: function () {
@@ -1359,6 +1359,7 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     this._onMouseUp = this._onMouseUp.bind(this);
                 }
                 NumberDragger.prototype._onMouseMove = function (e) {
+                    var e_5, _a;
                     e.stopPropagation();
                     var accel = 15;
                     var dx = Math.round((e.clientX - this._anchorMouseX) / accel);
@@ -1369,8 +1370,8 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     }
                     var y = e.clientY;
                     try {
-                        for (var _a = __values(this._segments), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var segment = _b.value;
+                        for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var segment = _c.value;
                             var bbox = segment.getBoundingClientRect();
                             if (y < bbox.bottom) {
                                 if (this._selectSegment(segment)) {
@@ -1387,11 +1388,10 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     catch (e_5_1) { e_5 = { error: e_5_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_5) throw e_5.error; }
                     }
-                    var e_5, _c;
                 };
                 NumberDragger.prototype._onMouseUp = function (e) {
                     this._cursorOverride.setCursor(this, '');
@@ -1406,13 +1406,14 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     this._document.body.removeChild(this._toplevel);
                 };
                 NumberDragger.prototype._selectSegment = function (segment) {
+                    var e_6, _a;
                     var incr = segment._incr;
                     if (this._currentIncr === incr)
                         return false;
                     this._currentIncr = incr;
                     try {
-                        for (var _a = __values(this._segments), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var seg = _b.value;
+                        for (var _b = __values(this._segments), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var seg = _c.value;
                             var hilite = seg === segment;
                             seg.style.backgroundColor = hilite ? '#c93' : '';
                             seg.style.color = hilite ? '#222' : '';
@@ -1422,12 +1423,11 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     catch (e_6_1) { e_6 = { error: e_6_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_6) throw e_6.error; }
                     }
                     return true;
-                    var e_6, _c;
                 };
                 NumberDragger.prototype._show = function () {
                     this._showTimeout = 0;
@@ -1824,11 +1824,12 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     return idx + this._prefix.length;
                 };
                 CodeEditor.prototype._rowColToLineIdx = function (row, col, clampIdx) {
+                    var e_7, _a;
                     this._recalculate();
                     var line;
                     try {
-                        for (var _a = __values(this._lineModel), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            line = _b.value;
+                        for (var _b = __values(this._lineModel), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            line = _c.value;
                             if (row >= line.startRow && row < line.startRow + line.rows)
                                 break;
                         }
@@ -1836,7 +1837,7 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     catch (e_7_1) { e_7 = { error: e_7_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_7) throw e_7.error; }
                     }
@@ -1856,7 +1857,6 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     else
                         idx = line.start + lineIdx;
                     return { line: line, idx: idx };
-                    var e_7, _c;
                 };
                 CodeEditor.prototype._xyToRowCol = function (x, y) {
                     this._recalculate();
@@ -1879,11 +1879,12 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     return { x: x, y: y };
                 };
                 CodeEditor.prototype._getRowLength = function (row) {
+                    var e_8, _a;
                     this._recalculate();
                     var line;
                     try {
-                        for (var _a = __values(this._lineModel), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            line = _b.value;
+                        for (var _b = __values(this._lineModel), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            line = _c.value;
                             if (row >= line.startRow && row < line.startRow + line.rows)
                                 break;
                         }
@@ -1891,7 +1892,7 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     catch (e_8_1) { e_8 = { error: e_8_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_8) throw e_8.error; }
                     }
@@ -1902,14 +1903,14 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                         return line.length % this._cols;
                     else
                         return this._cols;
-                    var e_8, _c;
                 };
                 CodeEditor.prototype._getCharPos = function (idx) {
+                    var e_9, _a;
                     this._recalculate();
                     var line;
                     try {
-                        for (var _a = __values(this._lineModel), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            line = _b.value;
+                        for (var _b = __values(this._lineModel), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            line = _c.value;
                             if (idx >= line.start && idx < line.end)
                                 break;
                         }
@@ -1917,7 +1918,7 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     catch (e_9_1) { e_9 = { error: e_9_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_9) throw e_9.error; }
                     }
@@ -1929,7 +1930,6 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     var col = lineIdx % this._cols;
                     var row = line.startRow + Math.min((lineIdx / this._cols) | 0, line.rows);
                     return { line: line, lineIdx: lineIdx, row: row, col: col };
-                    var e_9, _c;
                 };
                 CodeEditor.prototype._hasSelection = function () {
                     return this._textarea.selectionStart !== this._textarea.selectionEnd;
@@ -1975,6 +1975,7 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                 };
                 CodeEditor.prototype._redraw = function (t) {
                     var _this = this;
+                    var e_10, _a;
                     var hasFocus = this._textarea.matches(':focus');
                     // Skip redrawing if we're up to date to cut down on costs...
                     if (!this._needsRecalculate && !hasFocus)
@@ -2039,8 +2040,8 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     }
                     if (this._lineFlairs) {
                         try {
-                            for (var _a = __values(this._lineFlairs), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                var flair = _b.value;
+                            for (var _b = __values(this._lineFlairs), _c = _b.next(); !_c.done; _c = _b.next()) {
+                                var flair = _c.value;
                                 var line = this._lineModel[flair.lineno];
                                 if (!line)
                                     continue;
@@ -2050,7 +2051,7 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                         catch (e_10_1) { e_10 = { error: e_10_1 }; }
                         finally {
                             try {
-                                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                             }
                             finally { if (e_10) throw e_10.error; }
                         }
@@ -2170,7 +2171,6 @@ System.register("CodeEditor", [], function (exports_8, context_8) {
                     }
                     ctx.restore();
                     ctx.restore();
-                    var e_10, _c;
                 };
                 return CodeEditor;
             }());
@@ -2240,8 +2240,8 @@ System.register("Color", [], function (exports_9, context_9) {
 });
 System.register("MemoizeCache", ["util"], function (exports_10, context_10) {
     "use strict";
-    var __moduleName = context_10 && context_10.id;
     var util_4, MemoizeCache;
+    var __moduleName = context_10 && context_10.id;
     return {
         setters: [
             function (util_4_1) {
@@ -2276,6 +2276,7 @@ System.register("MemoizeCache", ["util"], function (exports_10, context_10) {
 });
 System.register("Program", ["MemoizeCache", "CodeEditor", "util"], function (exports_11, context_11) {
     "use strict";
+    var MemoizeCache_1, CodeEditor_1, util_5, DEBUG, BaseProgram, Program, FullscreenProgram, ProgramCache;
     var __moduleName = context_11 && context_11.id;
     function leftPad(n, v, num) {
         var s = '' + n;
@@ -2303,7 +2304,6 @@ System.register("Program", ["MemoizeCache", "CodeEditor", "util"], function (exp
         }
         return shader;
     }
-    var MemoizeCache_1, CodeEditor_1, util_5, DEBUG, BaseProgram, Program, FullscreenProgram, ProgramCache;
     return {
         setters: [
             function (MemoizeCache_1_1) {
@@ -2488,12 +2488,12 @@ System.register("Program", ["MemoizeCache", "CodeEditor", "util"], function (exp
 });
 System.register("RenderArena", [], function (exports_12, context_12) {
     "use strict";
+    var RenderArena;
     var __moduleName = context_12 && context_12.id;
     function pushAndReturn(a, v) {
         a.push(v);
         return v;
     }
-    var RenderArena;
     return {
         setters: [],
         execute: function () {
@@ -2522,77 +2522,77 @@ System.register("RenderArena", [], function (exports_12, context_12) {
                     this.programs.push(program);
                 };
                 RenderArena.prototype.destroy = function (gl) {
+                    var e_11, _a, e_12, _b, e_13, _c, e_14, _d, e_15, _e;
                     try {
-                        for (var _a = __values(this.textures), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var texture = _b.value;
+                        for (var _f = __values(this.textures), _g = _f.next(); !_g.done; _g = _f.next()) {
+                            var texture = _g.value;
                             gl.deleteTexture(texture);
                         }
                     }
                     catch (e_11_1) { e_11 = { error: e_11_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_g && !_g.done && (_a = _f.return)) _a.call(_f);
                         }
                         finally { if (e_11) throw e_11.error; }
                     }
                     this.textures = [];
                     try {
-                        for (var _d = __values(this.samplers), _e = _d.next(); !_e.done; _e = _d.next()) {
-                            var sampler = _e.value;
+                        for (var _h = __values(this.samplers), _j = _h.next(); !_j.done; _j = _h.next()) {
+                            var sampler = _j.value;
                             gl.deleteSampler(sampler);
                         }
                     }
                     catch (e_12_1) { e_12 = { error: e_12_1 }; }
                     finally {
                         try {
-                            if (_e && !_e.done && (_f = _d.return)) _f.call(_d);
+                            if (_j && !_j.done && (_b = _h.return)) _b.call(_h);
                         }
                         finally { if (e_12) throw e_12.error; }
                     }
                     this.samplers = [];
                     try {
-                        for (var _g = __values(this.buffers), _h = _g.next(); !_h.done; _h = _g.next()) {
-                            var buffer = _h.value;
+                        for (var _k = __values(this.buffers), _l = _k.next(); !_l.done; _l = _k.next()) {
+                            var buffer = _l.value;
                             gl.deleteBuffer(buffer);
                         }
                     }
                     catch (e_13_1) { e_13 = { error: e_13_1 }; }
                     finally {
                         try {
-                            if (_h && !_h.done && (_j = _g.return)) _j.call(_g);
+                            if (_l && !_l.done && (_c = _k.return)) _c.call(_k);
                         }
                         finally { if (e_13) throw e_13.error; }
                     }
                     this.buffers = [];
                     try {
-                        for (var _k = __values(this.vaos), _l = _k.next(); !_l.done; _l = _k.next()) {
-                            var vao = _l.value;
+                        for (var _m = __values(this.vaos), _o = _m.next(); !_o.done; _o = _m.next()) {
+                            var vao = _o.value;
                             gl.deleteVertexArray(vao);
                         }
                     }
                     catch (e_14_1) { e_14 = { error: e_14_1 }; }
                     finally {
                         try {
-                            if (_l && !_l.done && (_m = _k.return)) _m.call(_k);
+                            if (_o && !_o.done && (_d = _m.return)) _d.call(_m);
                         }
                         finally { if (e_14) throw e_14.error; }
                     }
                     this.vaos = [];
                     try {
-                        for (var _o = __values(this.programs), _p = _o.next(); !_p.done; _p = _o.next()) {
-                            var program = _p.value;
+                        for (var _p = __values(this.programs), _q = _p.next(); !_q.done; _q = _p.next()) {
+                            var program = _q.value;
                             program.destroy(gl);
                         }
                     }
                     catch (e_15_1) { e_15 = { error: e_15_1 }; }
                     finally {
                         try {
-                            if (_p && !_p.done && (_q = _o.return)) _q.call(_o);
+                            if (_q && !_q.done && (_e = _p.return)) _e.call(_p);
                         }
                         finally { if (e_15) throw e_15.error; }
                     }
                     this.programs = [];
-                    var e_11, _c, e_12, _f, e_13, _j, e_14, _m, e_15, _q;
                 };
                 return RenderArena;
             }());
@@ -2602,6 +2602,7 @@ System.register("RenderArena", [], function (exports_12, context_12) {
 });
 System.register("render", ["gl-matrix", "util", "Program", "Camera"], function (exports_13, context_13) {
     "use strict";
+    var gl_matrix_2, util_6, Program_1, Camera_1, CompareMode, FrontFaceMode, CullMode, BlendFactor, BlendMode, RenderFlags, FullscreenCopyProgram, RENDER_SAMPLES, ColorTarget, DepthTarget, depthClearFlags, RenderState;
     var __moduleName = context_13 && context_13.id;
     function flagChanged(stateFlag, newFlag) {
         return newFlag !== undefined && stateFlag !== newFlag;
@@ -2656,7 +2657,6 @@ System.register("render", ["gl-matrix", "util", "Program", "Camera"], function (
             stateFlags.frontFace = newFlags.frontFace;
         }
     }
-    var gl_matrix_2, util_6, Program_1, Camera_1, CompareMode, FrontFaceMode, CullMode, BlendFactor, BlendMode, RenderFlags, FullscreenCopyProgram, RENDER_SAMPLES, ColorTarget, DepthTarget, depthClearFlags, RenderState;
     return {
         setters: [
             function (gl_matrix_2_1) {
@@ -2978,6 +2978,7 @@ System.register("render", ["gl-matrix", "util", "Program", "Camera"], function (
 });
 System.register("RenderUtility", ["Program"], function (exports_14, context_14) {
     "use strict";
+    var Program_2, LinesProgram, vertexBuffer, indexBuffer, vao, indexData;
     var __moduleName = context_14 && context_14.id;
     function renderWireframeAABB(state, color, aabb, modelMatrix) {
         if (modelMatrix === void 0) { modelMatrix = null; }
@@ -3028,7 +3029,6 @@ System.register("RenderUtility", ["Program"], function (exports_14, context_14) 
         gl.bindVertexArray(null);
     }
     exports_14("renderWireframeAABB", renderWireframeAABB);
-    var Program_2, LinesProgram, vertexBuffer, indexBuffer, vao, indexData;
     return {
         setters: [
             function (Program_2_1) {
@@ -3072,8 +3072,8 @@ System.register("RenderUtility", ["Program"], function (exports_14, context_14) 
 });
 System.register("WasmMemoryManager", [], function (exports_15, context_15) {
     "use strict";
-    var __moduleName = context_15 && context_15.id;
     var WasmMemoryManager;
+    var __moduleName = context_15 && context_15.id;
     return {
         setters: [],
         execute: function () {
@@ -3108,6 +3108,7 @@ System.register("WasmMemoryManager", [], function (exports_15, context_15) {
 });
 System.register("byml", ["util"], function (exports_16, context_16) {
     "use strict";
+    var _a, util_7, fileDescriptions, ParseContext;
     var __moduleName = context_16 && context_16.id;
     function getUint24(view, offs, littleEndian) {
         if (littleEndian)
@@ -3242,7 +3243,6 @@ System.register("byml", ["util"], function (exports_16, context_16) {
         return node;
     }
     exports_16("parse", parse);
-    var util_7, fileDescriptions, ParseContext, _a;
     return {
         setters: [
             function (util_7_1) {
@@ -3280,6 +3280,7 @@ System.register("byml", ["util"], function (exports_16, context_16) {
 // New UI system
 System.register("ui", ["util", "Camera"], function (exports_17, context_17) {
     "use strict";
+    var util_8, Camera_2, HIGHLIGHT_COLOR, ScrollSelect, SingleSelect, SimpleSingleSelect, MultiSelect, Panel, OPEN_ICON, SceneSelect, CHECKERBOARD_IMAGE, TEXTURES_ICON, TextureViewer, FRUSTUM_ICON, ViewerSettings, ABOUT_ICON, About, LAYER_ICON, LayerPanel, UI;
     var __moduleName = context_17 && context_17.id;
     function createDOMFromString(s) {
         return document.createRange().createContextualFragment(s);
@@ -3306,7 +3307,6 @@ System.register("ui", ["util", "Camera"], function (exports_17, context_17) {
         var ctx = dst.getContext('2d');
         ctx.drawImage(src, 0, 0);
     }
-    var util_8, Camera_2, HIGHLIGHT_COLOR, ScrollSelect, SingleSelect, SimpleSingleSelect, MultiSelect, Panel, OPEN_ICON, SceneSelect, CHECKERBOARD_IMAGE, TEXTURES_ICON, TextureViewer, FRUSTUM_ICON, ViewerSettings, ABOUT_ICON, About, LAYER_ICON, LayerPanel, UI;
     return {
         setters: [
             function (util_8_1) {
@@ -3709,6 +3709,7 @@ System.register("ui", ["util", "Camera"], function (exports_17, context_17) {
                     this.surfaceView.appendChild(surface);
                 };
                 TextureViewer.prototype.showInFullSurfaceView = function (surfaces) {
+                    var e_16, _a;
                     this.fullSurfaceView.innerHTML = '';
                     try {
                         for (var surfaces_1 = __values(surfaces), surfaces_1_1 = surfaces_1.next(); !surfaces_1_1.done; surfaces_1_1 = surfaces_1.next()) {
@@ -3728,7 +3729,6 @@ System.register("ui", ["util", "Camera"], function (exports_17, context_17) {
                         }
                         finally { if (e_16) throw e_16.error; }
                     }
-                    var e_16, _a;
                 };
                 TextureViewer.prototype.selectTexture = function (i) {
                     var texture = this.textureList[i];
@@ -3866,6 +3866,7 @@ System.register("ui", ["util", "Camera"], function (exports_17, context_17) {
                     this.textureViewer.setTextureList(scene !== null ? scene.textures : []);
                 };
                 UI.prototype.setPanels = function (panels) {
+                    var e_17, _a;
                     this.toplevel.innerHTML = '';
                     try {
                         for (var panels_1 = __values(panels), panels_1_1 = panels_1.next(); !panels_1_1.done; panels_1_1 = panels_1.next()) {
@@ -3880,7 +3881,6 @@ System.register("ui", ["util", "Camera"], function (exports_17, context_17) {
                         }
                         finally { if (e_17) throw e_17.error; }
                     }
-                    var e_17, _a;
                 };
                 UI.prototype.setScenePanels = function (panels) {
                     this.setPanels(__spread([this.sceneSelect], panels, [this.textureViewer, this.viewerSettings, this.about]));
@@ -3894,8 +3894,8 @@ System.register("ui", ["util", "Camera"], function (exports_17, context_17) {
 // tslint:disable:no-console
 System.register("viewer", ["render", "InputManager"], function (exports_18, context_18) {
     "use strict";
-    var __moduleName = context_18 && context_18.id;
     var render_1, InputManager_1, Viewer;
+    var __moduleName = context_18 && context_18.id;
     return {
         setters: [
             function (render_1_1) {
@@ -3987,6 +3987,7 @@ System.register("viewer", ["render", "InputManager"], function (exports_18, cont
 // Generated by build_wat.js
 System.register("wat_modules", [], function (exports_19, context_19) {
     "use strict";
+    var yaz0_asCode, gx_texture_asCode;
     var __moduleName = context_19 && context_19.id;
     function yaz0_asInstance(imports) {
         return WebAssembly.compile(yaz0_asCode).then(function (module) {
@@ -4004,7 +4005,6 @@ System.register("wat_modules", [], function (exports_19, context_19) {
         });
     }
     exports_19("gx_texture_asInstance", gx_texture_asInstance);
-    var yaz0_asCode, gx_texture_asCode;
     return {
         setters: [],
         execute: function () {
@@ -4016,6 +4016,7 @@ System.register("wat_modules", [], function (exports_19, context_19) {
 // Nintendo Yaz0 format.
 System.register("compression/Yaz0", ["util", "wat_modules", "ArrayBufferSlice", "WasmMemoryManager"], function (exports_20, context_20) {
     "use strict";
+    var util_9, wat_modules_1, ArrayBufferSlice_2, WasmMemoryManager_1, _wasmInstance;
     var __moduleName = context_20 && context_20.id;
     function decompress(srcBuffer) {
         return _wasmInstance.then(function (wasmInstance) {
@@ -4037,7 +4038,6 @@ System.register("compression/Yaz0", ["util", "wat_modules", "ArrayBufferSlice", 
         });
     }
     exports_20("decompress", decompress);
-    var util_9, wat_modules_1, ArrayBufferSlice_2, WasmMemoryManager_1, _wasmInstance;
     return {
         setters: [
             function (util_9_1) {
@@ -4116,6 +4116,7 @@ System.register("fres/gx2_surface", [], function (exports_23, context_23) {
 });
 System.register("fres/bfres", ["fres/gx2_surface", "util"], function (exports_24, context_24) {
     "use strict";
+    var gx2_surface_1, util_10, UBOParameterType, RenderInfoParameterType;
     var __moduleName = context_24 && context_24.id;
     function readBinPtrT(view, offs, littleEndian) {
         var offs2 = view.getInt32(offs, littleEndian);
@@ -4159,6 +4160,7 @@ System.register("fres/bfres", ["fres/gx2_surface", "util"], function (exports_24
         return { surface: surface, texData: texData, mipData: mipData };
     }
     function parseFMDL(buffer, entry, littleEndian) {
+        var e_18, _a, e_19, _b, e_20, _c;
         var offs = entry.offs;
         var view = buffer.createDataView();
         util_10.assert(util_10.readString(buffer, offs + 0x00, 0x04) === 'FMDL');
@@ -4181,6 +4183,7 @@ System.register("fres/bfres", ["fres/gx2_surface", "util"], function (exports_24
             return { data: data, stride: stride };
         }
         function parseShaderAssignDict(offs) {
+            var e_21, _a;
             var resDic = parseResDic(buffer, offs, littleEndian);
             var entries = [];
             try {
@@ -4191,15 +4194,14 @@ System.register("fres/bfres", ["fres/gx2_surface", "util"], function (exports_24
                     entries.push({ key: key, value: value });
                 }
             }
-            catch (e_18_1) { e_18 = { error: e_18_1 }; }
+            catch (e_21_1) { e_21 = { error: e_21_1 }; }
             finally {
                 try {
                     if (resDic_1_1 && !resDic_1_1.done && (_a = resDic_1.return)) _a.call(resDic_1);
                 }
-                finally { if (e_18) throw e_18.error; }
+                finally { if (e_21) throw e_21.error; }
             }
             return entries;
-            var e_18, _a;
         }
         // Vertex buffers.
         var fvtxIdx = fvtxOffs;
@@ -4270,12 +4272,12 @@ System.register("fres/bfres", ["fres/gx2_surface", "util"], function (exports_24
                 fshp.push({ name: name_3, fmatIndex: fmatIndex, fvtxIndex: fvtxIndex, meshes: meshes });
             }
         }
-        catch (e_19_1) { e_19 = { error: e_19_1 }; }
+        catch (e_18_1) { e_18 = { error: e_18_1 }; }
         finally {
             try {
                 if (fshpResDic_1_1 && !fshpResDic_1_1.done && (_a = fshpResDic_1.return)) _a.call(fshpResDic_1);
             }
-            finally { if (e_19) throw e_19.error; }
+            finally { if (e_18) throw e_18.error; }
         }
         // Materials.
         var fmat = [];
@@ -4341,7 +4343,7 @@ System.register("fres/bfres", ["fres/gx2_surface", "util"], function (exports_24
                 catch (e_20_1) { e_20 = { error: e_20_1 }; }
                 finally {
                     try {
-                        if (renderInfoParameterResDic_1_1 && !renderInfoParameterResDic_1_1.done && (_b = renderInfoParameterResDic_1.return)) _b.call(renderInfoParameterResDic_1);
+                        if (renderInfoParameterResDic_1_1 && !renderInfoParameterResDic_1_1.done && (_c = renderInfoParameterResDic_1.return)) _c.call(renderInfoParameterResDic_1);
                     }
                     finally { if (e_20) throw e_20.error; }
                 }
@@ -4412,17 +4414,17 @@ System.register("fres/bfres", ["fres/gx2_surface", "util"], function (exports_24
                 fmat.push({ name: name_4, renderInfoParameters: renderInfoParameters, textureAssigns: textureAssigns, materialParameterDataBuffer: materialParameterDataBuffer, materialParameters: materialParameters, shaderAssign: shaderAssign, renderState: renderState });
             }
         }
-        catch (e_21_1) { e_21 = { error: e_21_1 }; }
+        catch (e_19_1) { e_19 = { error: e_19_1 }; }
         finally {
             try {
-                if (fmatResDic_1_1 && !fmatResDic_1_1.done && (_c = fmatResDic_1.return)) _c.call(fmatResDic_1);
+                if (fmatResDic_1_1 && !fmatResDic_1_1.done && (_b = fmatResDic_1.return)) _b.call(fmatResDic_1);
             }
-            finally { if (e_21) throw e_21.error; }
+            finally { if (e_19) throw e_19.error; }
         }
         return { fvtx: fvtx, fshp: fshp, fmat: fmat };
-        var e_19, _a, e_21, _c, e_20, _b;
     }
     function parse(buffer) {
+        var e_22, _a, e_23, _b;
         var view = buffer.createDataView();
         util_10.assert(util_10.readString(buffer, 0x00, 0x04) === 'FRES');
         var littleEndian;
@@ -4487,10 +4489,8 @@ System.register("fres/bfres", ["fres/gx2_surface", "util"], function (exports_24
             finally { if (e_23) throw e_23.error; }
         }
         return { textures: textures, models: models };
-        var e_22, _a, e_23, _b;
     }
     exports_24("parse", parse);
-    var gx2_surface_1, util_10, UBOParameterType, RenderInfoParameterType;
     return {
         setters: [
             function (gx2_surface_1_1) {
@@ -4546,6 +4546,7 @@ System.register("fres/bfres", ["fres/gx2_surface", "util"], function (exports_24
 // GX Display List parsing.
 System.register("gx/gx_displaylist", ["MemoizeCache", "util", "endian"], function (exports_25, context_25) {
     "use strict";
+    var MemoizeCache_2, util_11, endian_2, VtxLoaderCache, cache, compileVtxLoader, compileVtxLoaderMultiVat;
     var __moduleName = context_25 && context_25.id;
     function getComponentSizeRaw(compType) {
         switch (compType) {
@@ -4933,6 +4934,7 @@ System.register("gx/gx_displaylist", ["MemoizeCache", "util", "endian"], functio
             }
         }
         function compileVatFormats() {
+            var e_24, _a;
             var sources = [];
             var vatLayoutSources = new Map();
             for (var i = 0; i < 7 /* VTXFMT7 */; i++) {
@@ -4953,21 +4955,20 @@ System.register("gx/gx_displaylist", ["MemoizeCache", "util", "endian"], functio
             // Dynamic dispatch.
             var S = "\n        ";
             try {
-                for (var _a = __values(vatLayoutSources.entries()), _b = _a.next(); !_b.done; _b = _a.next()) {
-                    var _c = __read(_b.value, 2), vtxFmt = _c[0], vatLayoutSource = _c[1];
+                for (var _b = __values(vatLayoutSources.entries()), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var _d = __read(_c.value, 2), vtxFmt = _d[0], vatLayoutSource = _d[1];
                     S += "if (drawCall.vertexFormat === " + vtxFmt + ") {\n\n            " + vatLayoutSource + "\n\n        } else ";
                 }
             }
             catch (e_24_1) { e_24 = { error: e_24_1 }; }
             finally {
                 try {
-                    if (_b && !_b.done && (_d = _a.return)) _d.call(_a);
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                 }
                 finally { if (e_24) throw e_24.error; }
             }
             S += "{\n            throw new Error(\"Invalid vertex format \" + vertexFormat);\n        }";
             return S;
-            var e_24, _d;
         }
         function compileSrcVertexSizes() {
             return JSON.stringify(loadedVertexLayout.vatLayouts.map(function (vatLayout) { return vatLayout && vatLayout.srcVertexSize; }));
@@ -4978,7 +4979,6 @@ System.register("gx/gx_displaylist", ["MemoizeCache", "util", "endian"], functio
         var runVertices = runVerticesGenerator();
         return { loadedVertexLayout: loadedVertexLayout, runVertices: runVertices };
     }
-    var MemoizeCache_2, util_11, endian_2, VtxLoaderCache, cache, compileVtxLoader, compileVtxLoaderMultiVat;
     return {
         setters: [
             function (MemoizeCache_2_1) {
@@ -5022,6 +5022,7 @@ System.register("gx/gx_displaylist", ["MemoizeCache", "util", "endian"], functio
 // GX materials.
 System.register("gx/gx_material", ["render", "Program", "Color"], function (exports_26, context_26) {
     "use strict";
+    var render_2, Program_3, Color_1, EFB_WIDTH, EFB_HEIGHT, Color, vtxAttributeGenDefs, textureSamplerIdentities, GX_Program;
     var __moduleName = context_26 && context_26.id;
     function getVertexAttribLocation(vtxAttrib) {
         return vtxAttributeGenDefs.findIndex(function (genDef) { return genDef.attrib === vtxAttrib; });
@@ -5152,7 +5153,6 @@ System.register("gx/gx_material", ["render", "Program", "Color"], function (expo
         }
     }
     exports_26("getRasColorChannelID", getRasColorChannelID);
-    var render_2, Program_3, Color_1, EFB_WIDTH, EFB_HEIGHT, Color, vtxAttributeGenDefs, textureSamplerIdentities, GX_Program;
     return {
         setters: [
             function (render_2_1) {
@@ -5727,6 +5727,7 @@ System.register("gx/gx_material", ["render", "Program", "Color"], function (expo
 // GX texture decoding
 System.register("gx/gx_texture", ["ArrayBufferSlice", "util", "wat_modules", "WasmMemoryManager"], function (exports_27, context_27) {
     "use strict";
+    var ArrayBufferSlice_3, util_12, wat_modules_2, WasmMemoryManager_2, _wasmInstance;
     var __moduleName = context_27 && context_27.id;
     function calcPaletteSize(format, palette) {
         var paletteSize = 0;
@@ -5877,7 +5878,6 @@ System.register("gx/gx_texture", ["ArrayBufferSlice", "util", "wat_modules", "Wa
         });
     }
     exports_27("decodeTexture", decodeTexture);
-    var ArrayBufferSlice_3, util_12, wat_modules_2, WasmMemoryManager_2, _wasmInstance;
     return {
         setters: [
             function (ArrayBufferSlice_3_1) {
@@ -5904,6 +5904,7 @@ System.register("gx/gx_texture", ["ArrayBufferSlice", "util", "wat_modules", "Wa
 // Common helpers for GX rendering.
 System.register("gx/gx_render", ["gl-matrix", "gx/gx_material", "gx/gx_texture", "util", "BufferCoalescer", "ArrayBufferSlice"], function (exports_28, context_28) {
     "use strict";
+    var gl_matrix_3, GX_Material, GX_Texture, util_13, BufferCoalescer_1, ArrayBufferSlice_4, SceneParams, TextureMapping, MaterialParams, PacketParams, u_PacketParamsBufferSize, u_MaterialParamsBufferSize, u_SceneParamsBufferSize, bufferDataScratchSize, GXRenderHelper, GXShapeHelper, TextureHolder;
     var __moduleName = context_28 && context_28.id;
     function fillVec4(d, offs, v0, v1, v2, v3) {
         if (v1 === void 0) { v1 = 0; }
@@ -6103,7 +6104,6 @@ System.register("gx/gx_render", ["gl-matrix", "gx/gx_material", "gx/gx_texture",
         }
     }
     exports_28("translateWrapMode", translateWrapMode);
-    var gl_matrix_3, GX_Material, GX_Texture, util_13, BufferCoalescer_1, ArrayBufferSlice_4, SceneParams, TextureMapping, MaterialParams, PacketParams, u_PacketParamsBufferSize, u_MaterialParamsBufferSize, u_SceneParamsBufferSize, bufferDataScratchSize, GXRenderHelper, GXShapeHelper, TextureHolder;
     return {
         setters: [
             function (gl_matrix_3_1) {
@@ -6375,6 +6375,7 @@ System.register("gx/gx_render", ["gl-matrix", "gx/gx_material", "gx/gx_texture",
                     this.textureOverrides.set(name, textureOverride);
                 };
                 TextureHolder.prototype.addTextures = function (gl, textureEntries) {
+                    var e_25, _a;
                     var _loop_7 = function (texture) {
                         // Don't add textures without data.
                         if (texture.data === null)
@@ -6402,7 +6403,6 @@ System.register("gx/gx_render", ["gl-matrix", "gx/gx_material", "gx/gx_texture",
                         }
                         finally { if (e_25) throw e_25.error; }
                     }
-                    var e_25, _a;
                 };
                 return TextureHolder;
             }());
@@ -6412,6 +6412,7 @@ System.register("gx/gx_render", ["gl-matrix", "gx/gx_material", "gx/gx_texture",
 });
 System.register("j3d/render", ["gl-matrix", "j3d/j3d", "gx/gx_material", "gx/gx_render", "Camera"], function (exports_29, context_29) {
     "use strict";
+    var gl_matrix_4, j3d_1, GX_Material, gx_render_1, Camera_3, J3DTextureHolder, scratchModelMatrix, scratchViewMatrix, Command_Shape, Command_Material, ColorOverride, matrixScratch, matrixScratch2, SceneLoaderToken, SceneLoader, Scene;
     var __moduleName = context_29 && context_29.id;
     function texProjPerspMtx(dst, fov, aspect, scaleS, scaleT, transS, transT) {
         var cot = 1 / Math.tan(fov / 2);
@@ -6454,7 +6455,6 @@ System.register("j3d/render", ["gl-matrix", "j3d/j3d", "gx/gx_material", "gx/gx_
         dst[11] = 0.0;
         dst[15] = 1.0;
     }
-    var gl_matrix_4, j3d_1, GX_Material, gx_render_1, Camera_3, J3DTextureHolder, scratchModelMatrix, scratchViewMatrix, Command_Shape, Command_Material, ColorOverride, matrixScratch, matrixScratch2, SceneLoaderToken, SceneLoader, Scene;
     return {
         setters: [
             function (gl_matrix_4_1) {
@@ -6884,28 +6884,29 @@ System.register("j3d/render", ["gl-matrix", "j3d/j3d", "gx/gx_material", "gx/gx_
                     return glSampler;
                 };
                 Scene.prototype.translateTextures = function (gl, sceneLoader) {
+                    var e_26, _a;
                     var tex1 = sceneLoader.bmt !== null ? sceneLoader.bmt.tex1 : sceneLoader.bmd.tex1;
                     // TODO(jstpierre): How does separable textureData / sampler work with external
                     // texture resolve?
                     this.glSamplers = [];
                     try {
-                        for (var _a = __values(tex1.samplers), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var sampler = _b.value;
+                        for (var _b = __values(tex1.samplers), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var sampler = _c.value;
                             this.glSamplers.push(Scene.translateSampler(gl, sampler));
                         }
                     }
                     catch (e_26_1) { e_26 = { error: e_26_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_26) throw e_26.error; }
                     }
                     this.tex1Samplers = tex1.samplers;
-                    var e_26, _c;
                 };
                 Scene.prototype.translateModel = function (gl, sceneLoader) {
                     var _this = this;
+                    var e_27, _a;
                     var bmd = sceneLoader.bmd;
                     var bmt = sceneLoader.bmt;
                     var mat3 = (bmt !== null && bmt.mat3 !== null) ? bmt.mat3 : bmd.mat3;
@@ -6916,15 +6917,15 @@ System.register("j3d/render", ["gl-matrix", "j3d/j3d", "gx/gx_material", "gx/gx_
                         this.jointMatrices[i] = gl_matrix_4.mat4.create();
                     this.weightedJointMatrices = [];
                     try {
-                        for (var _a = __values(bmd.drw1.drw1Joints), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var drw1Joint = _b.value;
+                        for (var _b = __values(bmd.drw1.drw1Joints), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var drw1Joint = _c.value;
                             this.weightedJointMatrices.push(gl_matrix_4.mat4.create());
                         }
                     }
                     catch (e_27_1) { e_27 = { error: e_27_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_27) throw e_27.error; }
                     }
@@ -6938,9 +6939,9 @@ System.register("j3d/render", ["gl-matrix", "j3d/j3d", "gx/gx_material", "gx/gx_
                     });
                     // Iterate through scene graph.
                     this.translateSceneGraph(bmd.inf1.sceneGraph, null);
-                    var e_27, _c;
                 };
                 Scene.prototype.translateSceneGraph = function (node, commandList) {
+                    var e_28, _a;
                     switch (node.type) {
                         case j3d_1.HierarchyType.Shape:
                             commandList.push(this.shapeCommands[node.shapeIdx]);
@@ -6952,19 +6953,18 @@ System.register("j3d/render", ["gl-matrix", "j3d/j3d", "gx/gx_material", "gx/gx_
                             break;
                     }
                     try {
-                        for (var _a = __values(node.children), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var child = _b.value;
+                        for (var _b = __values(node.children), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var child = _c.value;
                             this.translateSceneGraph(child, commandList);
                         }
                     }
                     catch (e_28_1) { e_28 = { error: e_28_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_28) throw e_28.error; }
                     }
-                    var e_28, _c;
                 };
                 Scene.prototype.updateJointMatrixHierarchy = function (state, node, parentJointMatrix) {
                     // TODO(jstpierre): Don't pointer chase when traversing hierarchy every frame...
@@ -7023,6 +7023,7 @@ System.register("j3d/render", ["gl-matrix", "j3d/j3d", "gx/gx_material", "gx/gx_
 // Implements Nintendo's J3D formats (BMD, BDL, BTK, etc.)
 System.register("j3d/j3d", ["gl-matrix", "util", "gx/gx_displaylist", "gx/gx_material", "j3d/render", "Camera"], function (exports_30, context_30) {
     "use strict";
+    var gl_matrix_5, util_14, gx_displaylist_1, GX_Material, render_3, Camera_4, HierarchyType, DRW1JointKind, quatScratch, t, c, ci, J3DFileReaderHelper, BMD, BMT, BTI, BTK, BRK, BCK;
     var __moduleName = context_30 && context_30.id;
     function readStringTable(buffer, offs) {
         var view = buffer.createDataView(offs);
@@ -7239,6 +7240,7 @@ System.register("j3d/j3d", ["gl-matrix", "util", "gx/gx_displaylist", "gx/gx_mat
         return { bones: bones };
     }
     function readSHP1Chunk(buffer, bmd) {
+        var e_29, _a;
         var view = buffer.createDataView();
         var shapeCount = view.getUint16(0x08);
         var shapeTableOffs = view.getUint32(0x0C);
@@ -7263,8 +7265,8 @@ System.register("j3d/j3d", ["gl-matrix", "util", "gx/gx_displaylist", "gx/gx_mat
         var vtxArrays = [];
         try {
             // J3D only uses VTXFMT0.
-            for (var _a = __values(bmd.vtx1.vertexArrays.entries()), _b = _a.next(); !_b.done; _b = _a.next()) {
-                var _c = __read(_b.value, 2), attr = _c[0], vertexArray = _c[1];
+            for (var _b = __values(bmd.vtx1.vertexArrays.entries()), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var _d = __read(_c.value, 2), attr = _d[0], vertexArray = _d[1];
                 vat[attr] = { compCnt: vertexArray.compCnt, compType: vertexArray.compType, compShift: vertexArray.compShift };
                 vtxArrays[attr] = { buffer: vertexArray.buffer, offs: 0 };
             }
@@ -7272,7 +7274,7 @@ System.register("j3d/j3d", ["gl-matrix", "util", "gx/gx_displaylist", "gx/gx_mat
         catch (e_29_1) { e_29 = { error: e_29_1 }; }
         finally {
             try {
-                if (_b && !_b.done && (_d = _a.return)) _d.call(_a);
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
             finally { if (e_29) throw e_29.error; }
         }
@@ -7339,7 +7341,6 @@ System.register("j3d/j3d", ["gl-matrix", "util", "gx/gx_displaylist", "gx/gx_mat
             shapeIdx += 0x28;
         }
         return { vat: vat, shapes: shapes };
-        var e_29, _d;
     }
     function createTexMtx(m, scaleS, scaleT, rotation, translationS, translationT, centerS, centerT, centerQ) {
         // TODO(jstpierre): Remove these.
@@ -8034,7 +8035,6 @@ System.register("j3d/j3d", ["gl-matrix", "util", "gx/gx_displaylist", "gx/gx_mat
         }
         return { loopMode: loopMode, duration: duration, jointAnimationEntries: jointAnimationEntries };
     }
-    var gl_matrix_5, util_14, gx_displaylist_1, GX_Material, render_3, Camera_4, HierarchyType, DRW1JointKind, quatScratch, t, c, ci, J3DFileReaderHelper, BMD, BMT, BTI, BTK, BRK, BCK;
     return {
         setters: [
             function (gl_matrix_5_1) {
@@ -8261,6 +8261,7 @@ System.register("j3d/j3d", ["gl-matrix", "util", "gx/gx_displaylist", "gx/gx_mat
 // Nintendo RARC file format.
 System.register("j3d/rarc", ["util"], function (exports_31, context_31) {
     "use strict";
+    var util_15, RARC;
     var __moduleName = context_31 && context_31.id;
     function parse(buffer) {
         var view = buffer.createDataView();
@@ -8332,7 +8333,6 @@ System.register("j3d/rarc", ["util"], function (exports_31, context_31) {
         return rarc;
     }
     exports_31("parse", parse);
-    var util_15, RARC;
     return {
         setters: [
             function (util_15_1) {
@@ -8344,6 +8344,7 @@ System.register("j3d/rarc", ["util"], function (exports_31, context_31) {
                 function RARC() {
                 }
                 RARC.prototype.findDirParts = function (parts) {
+                    var e_30, _a;
                     var dir = this.root;
                     var _loop_9 = function (part) {
                         dir = dir.subdirs.find(function (subdir) { return subdir.name === part; });
@@ -8366,7 +8367,6 @@ System.register("j3d/rarc", ["util"], function (exports_31, context_31) {
                         finally { if (e_30) throw e_30.error; }
                     }
                     return dir;
-                    var e_30, _a;
                 };
                 RARC.prototype.findDir = function (path) {
                     return this.findDirParts(path.split('/'));
@@ -8390,6 +8390,7 @@ System.register("j3d/rarc", ["util"], function (exports_31, context_31) {
 });
 System.register("j3d/ztp_scenes", ["Progressable", "util", "compression/Yaz0", "ui", "j3d/j3d", "j3d/rarc", "j3d/render", "render", "gx/gx_material"], function (exports_32, context_32) {
     "use strict";
+    var Progressable_2, util_16, Yaz0, UI, j3d_2, RARC, render_4, render_5, gx_material_1, ZTPTextureHolder, TwilightPrincessRenderer, TwilightPrincessSceneDesc, id, name, sceneDescs, sceneGroup;
     var __moduleName = context_32 && context_32.id;
     function createScene(gl, textureHolder, bmdFile, btkFile, brkFile, bckFile, bmtFile) {
         var bmd = j3d_2.BMD.parse(bmdFile.buffer);
@@ -8416,7 +8417,6 @@ System.register("j3d/ztp_scenes", ["Progressable", "util", "compression/Yaz0", "
         });
         return scenes.filter(function (s) { return !!s; });
     }
-    var Progressable_2, util_16, Yaz0, UI, j3d_2, RARC, render_4, render_5, gx_material_1, ZTPTextureHolder, TwilightPrincessRenderer, TwilightPrincessSceneDesc, id, name, sceneDescs, sceneGroup;
     return {
         setters: [
             function (Progressable_2_1) {
@@ -8619,6 +8619,7 @@ System.register("j3d/ztp_scenes", ["Progressable", "util", "compression/Yaz0", "
 });
 System.register("j3d/scenes", ["util", "ui", "j3d/j3d", "compression/Yaz0", "j3d/rarc", "j3d/render"], function (exports_33, context_33) {
     "use strict";
+    var util_17, UI, j3d_3, Yaz0, RARC, render_6, MultiScene;
     var __moduleName = context_33 && context_33.id;
     function createScene(gl, textureHolder, bmdFile, btkFile, brkFile, bckFile, bmtFile) {
         var bmd = j3d_3.BMD.parse(bmdFile.buffer);
@@ -8695,7 +8696,6 @@ System.register("j3d/scenes", ["util", "ui", "j3d/j3d", "compression/Yaz0", "j3d
         });
     }
     exports_33("createMultiSceneFromBuffer", createMultiSceneFromBuffer);
-    var util_17, UI, j3d_3, Yaz0, RARC, render_6, MultiScene;
     return {
         setters: [
             function (util_17_1) {
@@ -8736,22 +8736,22 @@ System.register("j3d/scenes", ["util", "ui", "j3d/j3d", "compression/Yaz0", "j3d
                     this.scenes.forEach(function (scene) { return scene.destroy(gl); });
                 };
                 MultiScene.prototype.setScenes = function (scenes) {
+                    var e_31, _a;
                     this.scenes = scenes;
                     this.textures = [];
                     try {
-                        for (var _a = __values(this.scenes), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var scene = _b.value;
+                        for (var _b = __values(this.scenes), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var scene = _c.value;
                             this.textures = this.textures.concat(scene.textures);
                         }
                     }
                     catch (e_31_1) { e_31 = { error: e_31_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_31) throw e_31.error; }
                     }
-                    var e_31, _c;
                 };
                 return MultiScene;
             }());
@@ -8761,6 +8761,7 @@ System.register("j3d/scenes", ["util", "ui", "j3d/j3d", "compression/Yaz0", "j3d
 });
 System.register("j3d/mkdd_scenes", ["j3d/scenes", "util", "gl-matrix", "j3d/rarc", "j3d/render", "j3d/j3d"], function (exports_34, context_34) {
     "use strict";
+    var scenes_1, util_18, gl_matrix_6, RARC, render_7, j3d_4, id, name, MKDDSceneDesc, sceneDescs, sceneGroup;
     var __moduleName = context_34 && context_34.id;
     function parseBOL(buffer) {
         var view = buffer.createDataView();
@@ -8791,7 +8792,6 @@ System.register("j3d/mkdd_scenes", ["j3d/scenes", "util", "gl-matrix", "j3d/rarc
         }
         return { objects: objects };
     }
-    var scenes_1, util_18, gl_matrix_6, RARC, render_7, j3d_4, id, name, MKDDSceneDesc, sceneDescs, sceneGroup;
     return {
         setters: [
             function (scenes_1_1) {
@@ -8839,6 +8839,7 @@ System.register("j3d/mkdd_scenes", ["j3d/scenes", "util", "gl-matrix", "j3d/rarc
                     var _this = this;
                     var path = "data/j3d/mkdd/Course/" + this.path;
                     return util_18.fetch(path).then(function (buffer) {
+                        var e_32, _a;
                         var rarc = RARC.parse(buffer);
                         // Find course name.
                         var bolFile = rarc.files.find(function (f) { return f.name.endsWith('_course.bol'); });
@@ -8869,8 +8870,8 @@ System.register("j3d/mkdd_scenes", ["j3d/scenes", "util", "gl-matrix", "j3d/rarc
                         var bol = parseBOL(bolFile.buffer);
                         console.log(courseName, rarc, bol);
                         try {
-                            for (var _a = __values(bol.objects), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                var obj = _b.value;
+                            for (var _b = __values(bol.objects), _c = _b.next(); !_c.done; _c = _b.next()) {
+                                var obj = _c.value;
                                 switch (obj.id) {
                                     case 0x0001:
                                     case 0x0009:
@@ -8924,12 +8925,11 @@ System.register("j3d/mkdd_scenes", ["j3d/scenes", "util", "gl-matrix", "j3d/rarc
                         catch (e_32_1) { e_32 = { error: e_32_1 }; }
                         finally {
                             try {
-                                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                             }
                             finally { if (e_32) throw e_32.error; }
                         }
                         return new scenes_1.MultiScene(scenes);
-                        var e_32, _c;
                     });
                 };
                 return MKDDSceneDesc;
@@ -8958,6 +8958,7 @@ System.register("j3d/mkdd_scenes", ["j3d/scenes", "util", "gl-matrix", "j3d/rarc
 });
 System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render", "compression/Yaz0", "ui", "gx/gx_material", "j3d/j3d", "j3d/rarc", "j3d/render", "Program", "Color"], function (exports_35, context_35) {
     "use strict";
+    var gl_matrix_7, Progressable_3, util_19, render_8, Yaz0, UI, GX_Material, j3d_5, RARC, render_9, Program_4, Color_2, CameraPos, TIME_OF_DAY_ICON, WindWakerRoomRenderer, PlaneColorProgram, SeaPlane, WindWakerRenderer, WindWakerSceneDesc, SeaSceneDesc, sceneDescs, id, name, sceneGroup;
     var __moduleName = context_35 && context_35.id;
     function getColorsFromDZS(buffer, roomIdx, timeOfDay) {
         var view = buffer.createDataView();
@@ -9033,7 +9034,7 @@ System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render"
         var brkFile = rarc.findFile("brk/" + name + ".brk");
         var bckFile = rarc.findFile("bck/" + name + ".bck");
         var bdl = j3d_5.BMD.parse(bdlFile.buffer);
-        var sceneLoader = new render_8.SceneLoader(textureHolder, bdl, null);
+        var sceneLoader = new render_9.SceneLoader(textureHolder, bdl, null);
         textureHolder.addJ3DTextures(gl, bdl);
         var scene = sceneLoader.createScene(gl);
         scene.setBTK(btkFile !== null ? j3d_5.BTK.parse(btkFile.buffer) : null);
@@ -9042,7 +9043,6 @@ System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render"
         scene.setIsSkybox(isSkybox);
         return scene;
     }
-    var gl_matrix_7, Progressable_3, util_19, render_9, Yaz0, UI, GX_Material, j3d_5, RARC, render_8, Program_4, Color_2, CameraPos, TIME_OF_DAY_ICON, WindWakerRoomRenderer, PlaneColorProgram, SeaPlane, WindWakerRenderer, WindWakerSceneDesc, SeaSceneDesc, sceneDescs, id, name, sceneGroup;
     return {
         setters: [
             function (gl_matrix_7_1) {
@@ -9054,8 +9054,8 @@ System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render"
             function (util_19_1) {
                 util_19 = util_19_1;
             },
-            function (render_9_1) {
-                render_9 = render_9_1;
+            function (render_8_1) {
+                render_8 = render_8_1;
             },
             function (Yaz0_3) {
                 Yaz0 = Yaz0_3;
@@ -9072,8 +9072,8 @@ System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render"
             function (RARC_4) {
                 RARC = RARC_4;
             },
-            function (render_8_1) {
-                render_8 = render_8_1;
+            function (render_9_1) {
+                render_9 = render_9_1;
             },
             function (Program_4_1) {
                 Program_4 = Program_4_1;
@@ -9119,28 +9119,28 @@ System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render"
                 };
                 WindWakerRoomRenderer.prototype.setColors = function (colors) {
                     if (colors !== undefined) {
-                        this.model.setColorOverride(render_8.ColorOverride.K0, colors.light);
-                        this.model.setColorOverride(render_8.ColorOverride.C0, colors.amb);
+                        this.model.setColorOverride(render_9.ColorOverride.K0, colors.light);
+                        this.model.setColorOverride(render_9.ColorOverride.C0, colors.amb);
                         if (this.model1) {
-                            this.model1.setColorOverride(render_8.ColorOverride.K0, colors.ocean);
-                            this.model1.setColorOverride(render_8.ColorOverride.C0, colors.wave);
-                            this.model1.setColorOverride(render_8.ColorOverride.C1, colors.splash);
-                            this.model1.setColorOverride(render_8.ColorOverride.K1, colors.splash2);
+                            this.model1.setColorOverride(render_9.ColorOverride.K0, colors.ocean);
+                            this.model1.setColorOverride(render_9.ColorOverride.C0, colors.wave);
+                            this.model1.setColorOverride(render_9.ColorOverride.C1, colors.splash);
+                            this.model1.setColorOverride(render_9.ColorOverride.K1, colors.splash2);
                         }
                         if (this.model3)
-                            this.model3.setColorOverride(render_8.ColorOverride.C0, colors.doors);
+                            this.model3.setColorOverride(render_9.ColorOverride.C0, colors.doors);
                     }
                     else {
-                        this.model.setColorOverride(render_8.ColorOverride.K0, undefined);
-                        this.model.setColorOverride(render_8.ColorOverride.C0, undefined);
+                        this.model.setColorOverride(render_9.ColorOverride.K0, undefined);
+                        this.model.setColorOverride(render_9.ColorOverride.C0, undefined);
                         if (this.model1) {
-                            this.model1.setColorOverride(render_8.ColorOverride.K0, undefined);
-                            this.model1.setColorOverride(render_8.ColorOverride.C0, undefined);
-                            this.model1.setColorOverride(render_8.ColorOverride.C1, undefined);
-                            this.model1.setColorOverride(render_8.ColorOverride.K1, undefined);
+                            this.model1.setColorOverride(render_9.ColorOverride.K0, undefined);
+                            this.model1.setColorOverride(render_9.ColorOverride.C0, undefined);
+                            this.model1.setColorOverride(render_9.ColorOverride.C1, undefined);
+                            this.model1.setColorOverride(render_9.ColorOverride.K1, undefined);
                         }
                         if (this.model3)
-                            this.model3.setColorOverride(render_8.ColorOverride.C0, undefined);
+                            this.model3.setColorOverride(render_9.ColorOverride.C0, undefined);
                     }
                 };
                 WindWakerRoomRenderer.prototype.render = function (state) {
@@ -9241,27 +9241,28 @@ System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render"
                     this.vr_back_cloud = createScene(gl, this.textureHolder, stageRarc, "vr_back_cloud", true);
                 }
                 WindWakerRenderer.prototype.setTimeOfDay = function (index) {
+                    var e_33, _a;
                     var dzsFile = this.stageRarc.findFile("dzs/stage.dzs");
                     var timeOfDay = index - 1;
                     var colors = timeOfDay === -1 ? undefined : getColorsFromDZS(dzsFile.buffer, 0, timeOfDay);
                     if (colors !== undefined) {
                         this.seaPlane.setColor(colors.ocean);
-                        this.vr_sky.setColorOverride(render_8.ColorOverride.K0, colors.vr_sky);
-                        this.vr_uso_umi.setColorOverride(render_8.ColorOverride.K0, colors.vr_uso_umi);
-                        this.vr_kasumi_mae.setColorOverride(render_8.ColorOverride.C0, colors.vr_kasumi_mae);
-                        this.vr_back_cloud.setColorOverride(render_8.ColorOverride.K0, colors.vr_back_cloud);
-                        this.vr_back_cloud.setAlphaOverride(render_8.ColorOverride.K0, colors.vr_back_cloud.a);
+                        this.vr_sky.setColorOverride(render_9.ColorOverride.K0, colors.vr_sky);
+                        this.vr_uso_umi.setColorOverride(render_9.ColorOverride.K0, colors.vr_uso_umi);
+                        this.vr_kasumi_mae.setColorOverride(render_9.ColorOverride.C0, colors.vr_kasumi_mae);
+                        this.vr_back_cloud.setColorOverride(render_9.ColorOverride.K0, colors.vr_back_cloud);
+                        this.vr_back_cloud.setAlphaOverride(render_9.ColorOverride.K0, colors.vr_back_cloud.a);
                     }
                     else {
-                        this.vr_sky.setColorOverride(render_8.ColorOverride.K0, undefined);
-                        this.vr_uso_umi.setColorOverride(render_8.ColorOverride.K0, undefined);
-                        this.vr_kasumi_mae.setColorOverride(render_8.ColorOverride.C0, undefined);
-                        this.vr_back_cloud.setColorOverride(render_8.ColorOverride.K0, undefined);
-                        this.vr_back_cloud.setAlphaOverride(render_8.ColorOverride.K0, undefined);
+                        this.vr_sky.setColorOverride(render_9.ColorOverride.K0, undefined);
+                        this.vr_uso_umi.setColorOverride(render_9.ColorOverride.K0, undefined);
+                        this.vr_kasumi_mae.setColorOverride(render_9.ColorOverride.C0, undefined);
+                        this.vr_back_cloud.setColorOverride(render_9.ColorOverride.K0, undefined);
+                        this.vr_back_cloud.setAlphaOverride(render_9.ColorOverride.K0, undefined);
                     }
                     try {
-                        for (var _a = __values(this.roomRenderers), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var roomRenderer = _b.value;
+                        for (var _b = __values(this.roomRenderers), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var roomRenderer = _c.value;
                             var roomColors = timeOfDay === -1 ? undefined : getColorsFromDZS(dzsFile.buffer, 0, timeOfDay);
                             roomRenderer.setColors(roomColors);
                         }
@@ -9269,11 +9270,10 @@ System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render"
                     catch (e_33_1) { e_33 = { error: e_33_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_33) throw e_33.error; }
                     }
-                    var e_33, _c;
                 };
                 WindWakerRenderer.prototype.createPanels = function () {
                     var _this = this;
@@ -9310,9 +9310,9 @@ System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render"
                     this.vr_kasumi_mae.render(state);
                     this.vr_uso_umi.render(state);
                     this.vr_back_cloud.render(state);
-                    state.useFlags(render_9.depthClearFlags);
+                    state.useFlags(render_8.depthClearFlags);
                     gl.clear(gl.DEPTH_BUFFER_BIT);
-                    state.useFlags(render_9.RenderFlags.default);
+                    state.useFlags(render_8.RenderFlags.default);
                     // Render sea plane.
                     this.seaPlane.render(state);
                     for (var i = 0; i < this.roomRenderers.length; i++) {
@@ -9321,24 +9321,24 @@ System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render"
                     }
                 };
                 WindWakerRenderer.prototype.destroy = function (gl) {
+                    var e_34, _a;
                     this.vr_sky.destroy(gl);
                     this.vr_kasumi_mae.destroy(gl);
                     this.vr_uso_umi.destroy(gl);
                     this.vr_back_cloud.destroy(gl);
                     try {
-                        for (var _a = __values(this.roomRenderers), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var roomRenderer = _b.value;
+                        for (var _b = __values(this.roomRenderers), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var roomRenderer = _c.value;
                             roomRenderer.destroy(gl);
                         }
                     }
                     catch (e_34_1) { e_34 = { error: e_34_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_34) throw e_34.error; }
                     }
-                    var e_34, _c;
                 };
                 return WindWakerRenderer;
             }());
@@ -9357,7 +9357,7 @@ System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render"
                         this.fetchRarc(this.path),
                     ]).then(function (_a) {
                         var _b = __read(_a, 2), stageRarc = _b[0], roomRarc = _b[1];
-                        var textureHolder = new render_8.J3DTextureHolder();
+                        var textureHolder = new render_9.J3DTextureHolder();
                         var renderer = new WindWakerRenderer(gl, textureHolder, stageRarc, _this.cameraPos);
                         renderer.roomRenderers.push(new WindWakerRoomRenderer(gl, textureHolder, roomIdx, roomRarc));
                         return renderer;
@@ -9393,7 +9393,8 @@ System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render"
                     }
                     return Progressable_3.default.all(rarcs).then(function (_a) {
                         var _b = __read(_a), stageRarc = _b[0], roomRarcs = _b.slice(1);
-                        var textureHolder = new render_8.J3DTextureHolder();
+                        var e_35, _c;
+                        var textureHolder = new render_9.J3DTextureHolder();
                         var renderer = new WindWakerRenderer(gl, textureHolder, stageRarc.rarc, _this.cameraPos);
                         var modelMatrix = gl_matrix_7.mat4.create();
                         var scale = 0.4;
@@ -9421,7 +9422,6 @@ System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render"
                             finally { if (e_35) throw e_35.error; }
                         }
                         return renderer;
-                        var e_35, _c;
                     });
                 };
                 SeaSceneDesc.prototype.fetchRarc = function (path) {
@@ -9452,6 +9452,7 @@ System.register("j3d/zww_scenes", ["gl-matrix", "Progressable", "util", "render"
 });
 System.register("j3d/sms_scenes", ["util", "render", "compression/Yaz0", "j3d/rarc", "j3d/render", "j3d/scenes", "gx/gx_material", "gl-matrix"], function (exports_36, context_36) {
     "use strict";
+    var util_20, render_10, Yaz0, RARC, render_11, scenes_2, gx_material_2, gl_matrix_8, sjisDecoder, SunshineRenderer, SunshineSceneDesc, id, name, sceneDescs, sceneGroup;
     var __moduleName = context_36 && context_36.id;
     function unpack(buffer, sig) {
         var view = buffer.createDataView();
@@ -9627,7 +9628,6 @@ System.register("j3d/sms_scenes", ["util", "render", "compression/Yaz0", "j3d/ra
                 return { type: 'Unknown', klass: klass, name: name, size: size };
         }
     }
-    var util_20, render_10, Yaz0, RARC, render_11, scenes_2, gx_material_2, gl_matrix_8, sjisDecoder, SunshineRenderer, SunshineSceneDesc, id, name, sceneDescs, sceneGroup;
     return {
         setters: [
             function (util_20_1) {
@@ -9672,6 +9672,7 @@ System.register("j3d/sms_scenes", ["util", "render", "compression/Yaz0", "j3d/ra
                     this.textures = textureHolder.viewerTextures;
                 }
                 SunshineRenderer.prototype.render = function (state) {
+                    var e_36, _a;
                     var gl = state.gl;
                     this.mainColorTarget.setParameters(gl, state.onscreenColorTarget.width, state.onscreenColorTarget.height);
                     state.useRenderTarget(this.mainColorTarget);
@@ -9687,15 +9688,15 @@ System.register("j3d/sms_scenes", ["util", "render", "compression/Yaz0", "j3d/ra
                     if (this.seaScene)
                         this.seaScene.render(state);
                     try {
-                        for (var _a = __values(this.extraScenes), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var scene = _b.value;
+                        for (var _b = __values(this.extraScenes), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var scene = _c.value;
                             scene.render(state);
                         }
                     }
                     catch (e_36_1) { e_36 = { error: e_36_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_36) throw e_36.error; }
                     }
@@ -9708,7 +9709,6 @@ System.register("j3d/sms_scenes", ["util", "render", "compression/Yaz0", "j3d/ra
                         this.textureHolder.setTextureOverride("indirectdummy", textureOverride);
                         indirectScene.render(state);
                     }
-                    var e_36, _c;
                 };
                 SunshineRenderer.prototype.destroy = function (gl) {
                     if (this.skyScene)
@@ -9764,6 +9764,7 @@ System.register("j3d/sms_scenes", ["util", "render", "compression/Yaz0", "j3d/ra
                 SunshineSceneDesc.prototype.createSceneBinObjects = function (gl, textureHolder, rarc, obj) {
                     var _this = this;
                     function flatten(L) {
+                        var e_37, _a;
                         var R = [];
                         try {
                             for (var L_1 = __values(L), L_1_1 = L_1.next(); !L_1_1.done; L_1_1 = L_1.next()) {
@@ -9779,7 +9780,6 @@ System.register("j3d/sms_scenes", ["util", "render", "compression/Yaz0", "j3d/ra
                             finally { if (e_37) throw e_37.error; }
                         }
                         return R;
-                        var e_37, _a;
                     }
                     switch (obj.type) {
                         case 'Group':
@@ -9905,8 +9905,8 @@ System.register("j3d/sms_scenes", ["util", "render", "compression/Yaz0", "j3d/ra
 });
 System.register("j3d/smg_scenes", ["Progressable", "util", "render", "Program", "j3d/render", "j3d/scenes", "gx/gx_material"], function (exports_37, context_37) {
     "use strict";
-    var __moduleName = context_37 && context_37.id;
     var Progressable_4, util_21, render_12, Program_5, render_13, scenes_3, gx_material_3, BloomPassBlurProgram, BloomPassBokehProgram, SMGRenderer, SMGSceneDesc, id, name, sceneDescs, sceneGroup;
+    var __moduleName = context_37 && context_37.id;
     return {
         setters: [
             function (Progressable_4_1) {
@@ -10094,6 +10094,7 @@ System.register("j3d/smg_scenes", ["Progressable", "util", "render", "Program", 
 });
 System.register("compression/CX", ["ArrayBufferSlice"], function (exports_38, context_38) {
     "use strict";
+    var ArrayBufferSlice_5, CompressionType;
     var __moduleName = context_38 && context_38.id;
     // Nintendo's "CX" formats.
     // CX LZ format ("LZ10")
@@ -10223,7 +10224,6 @@ System.register("compression/CX", ["ArrayBufferSlice"], function (exports_38, co
         }
     }
     exports_38("decompress", decompress);
-    var ArrayBufferSlice_5, CompressionType;
     return {
         setters: [
             function (ArrayBufferSlice_5_1) {
@@ -10240,6 +10240,7 @@ System.register("compression/CX", ["ArrayBufferSlice"], function (exports_38, co
 // SM64DS's LZ10 wrapper, which is just a "LZ77" prefix for the file.
 System.register("sm64ds/lz77", ["compression/CX", "util"], function (exports_39, context_39) {
     "use strict";
+    var CX_1, util_22;
     var __moduleName = context_39 && context_39.id;
     function isLZ77(srcBuffer) {
         return (util_22.readString(srcBuffer, 0x00, 0x05) === 'LZ77\x10');
@@ -10252,7 +10253,6 @@ System.register("sm64ds/lz77", ["compression/CX", "util"], function (exports_39,
             return srcBuffer;
     }
     exports_39("maybeDecompress", maybeDecompress);
-    var CX_1, util_22;
     return {
         setters: [
             function (CX_1_1) {
@@ -10269,6 +10269,7 @@ System.register("sm64ds/lz77", ["compression/CX", "util"], function (exports_39,
 // Read DS texture formats.
 System.register("sm64ds/nitro_tex", [], function (exports_40, context_40) {
     "use strict";
+    var Format;
     var __moduleName = context_40 && context_40.id;
     function expand3to8(n) {
         return (n << (8 - 3)) | (n << (8 - 6)) | (n >>> (9 - 8));
@@ -10470,7 +10471,6 @@ System.register("sm64ds/nitro_tex", [], function (exports_40, context_40) {
         }
     }
     exports_40("readTexture", readTexture);
-    var Format;
     return {
         setters: [],
         execute: function () {
@@ -10491,6 +10491,7 @@ System.register("sm64ds/nitro_tex", [], function (exports_40, context_40) {
 // Read DS Geometry Engine commands.
 System.register("sm64ds/nitro_gx", ["sm64ds/nitro_tex"], function (exports_41, context_41) {
     "use strict";
+    var nitro_tex_1, CmdType, PolyType, VERTEX_SIZE, VERTEX_BYTES, tmp, Context, ContextInternal;
     var __moduleName = context_41 && context_41.id;
     function bgr5(pixel) {
         nitro_tex_1.bgr5(tmp, 0, pixel);
@@ -10717,7 +10718,6 @@ System.register("sm64ds/nitro_gx", ["sm64ds/nitro_tex"], function (exports_41, c
         return ctx.packets;
     }
     exports_41("readCmds", readCmds);
-    var nitro_tex_1, CmdType, PolyType, VERTEX_SIZE, VERTEX_BYTES, tmp, Context, ContextInternal;
     return {
         setters: [
             function (nitro_tex_1_1) {
@@ -10780,6 +10780,7 @@ System.register("sm64ds/nitro_gx", ["sm64ds/nitro_tex"], function (exports_41, c
 });
 System.register("sm64ds/nitro_bmd", ["gl-matrix", "sm64ds/nitro_gx", "sm64ds/nitro_tex", "util"], function (exports_42, context_42) {
     "use strict";
+    var gl_matrix_9, NITRO_GX, NITRO_Tex, util_23, Material, Model, TextureKey, Texture, BMD;
     var __moduleName = context_42 && context_42.id;
     function parseModel(bmd, buffer, idx) {
         var offs = bmd.modelOffsBase + idx * 0x40;
@@ -10927,7 +10928,6 @@ System.register("sm64ds/nitro_bmd", ["gl-matrix", "sm64ds/nitro_gx", "sm64ds/nit
         return bmd;
     }
     exports_42("parse", parse);
-    var gl_matrix_9, NITRO_GX, NITRO_Tex, util_23, Material, Model, TextureKey, Texture, BMD;
     return {
         setters: [
             function (gl_matrix_9_1) {
@@ -10983,6 +10983,7 @@ System.register("sm64ds/nitro_bmd", ["gl-matrix", "sm64ds/nitro_gx", "sm64ds/nit
 });
 System.register("sm64ds/render", ["gl-matrix", "byml", "sm64ds/lz77", "sm64ds/nitro_bmd", "render", "Program", "RenderArena", "util", "Camera"], function (exports_43, context_43) {
     "use strict";
+    var gl_matrix_10, BYML, LZ77, NITRO_BMD, render_14, Program_6, RenderArena_1, util_24, Camera_5, NITRO_Program, VERTEX_SIZE, VERTEX_BYTES, YSpinAnimation, scratchModelMatrix, scratchViewMatrix, BMDRenderer, SM64DSRenderer, SceneDesc;
     var __moduleName = context_43 && context_43.id;
     function textureToCanvas(bmdTex) {
         var canvas = document.createElement("canvas");
@@ -10997,6 +10998,7 @@ System.register("sm64ds/render", ["gl-matrix", "byml", "sm64ds/lz77", "sm64ds/ni
         return { name: bmdTex.name, surfaces: surfaces };
     }
     function collectTextures(scenes) {
+        var e_38, _a;
         var textures = [];
         try {
             for (var scenes_4 = __values(scenes), scenes_4_1 = scenes_4.next(); !scenes_4_1.done; scenes_4_1 = scenes_4.next()) {
@@ -11013,9 +11015,7 @@ System.register("sm64ds/render", ["gl-matrix", "byml", "sm64ds/lz77", "sm64ds/ni
             finally { if (e_38) throw e_38.error; }
         }
         return textures;
-        var e_38, _a;
     }
-    var gl_matrix_10, BYML, LZ77, NITRO_BMD, render_14, Program_6, RenderArena_1, util_24, Camera_5, NITRO_Program, VERTEX_SIZE, VERTEX_BYTES, YSpinAnimation, scratchModelMatrix, scratchViewMatrix, BMDRenderer, SM64DSRenderer, SceneDesc;
     return {
         setters: [
             function (gl_matrix_10_1) {
@@ -11244,32 +11244,32 @@ System.register("sm64ds/render", ["gl-matrix", "byml", "sm64ds/lz77", "sm64ds/ni
                         this.opaqueCommands.push(func);
                 };
                 BMDRenderer.prototype.translateBMD = function (gl, bmd) {
+                    var e_39, _a, e_40, _b;
                     try {
-                        for (var _a = __values(bmd.models), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var model = _b.value;
+                        for (var _c = __values(bmd.models), _d = _c.next(); !_d.done; _d = _c.next()) {
+                            var model = _d.value;
                             try {
-                                for (var _c = __values(model.batches), _d = _c.next(); !_d.done; _d = _c.next()) {
-                                    var batch = _d.value;
+                                for (var _e = __values(model.batches), _f = _e.next(); !_f.done; _f = _e.next()) {
+                                    var batch = _f.value;
                                     this.translateBatch(gl, model, batch);
                                 }
                             }
-                            catch (e_39_1) { e_39 = { error: e_39_1 }; }
+                            catch (e_40_1) { e_40 = { error: e_40_1 }; }
                             finally {
                                 try {
-                                    if (_d && !_d.done && (_e = _c.return)) _e.call(_c);
+                                    if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                                 }
-                                finally { if (e_39) throw e_39.error; }
+                                finally { if (e_40) throw e_40.error; }
                             }
                         }
                     }
-                    catch (e_40_1) { e_40 = { error: e_40_1 }; }
+                    catch (e_39_1) { e_39 = { error: e_39_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_f = _a.return)) _f.call(_a);
+                            if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                         }
-                        finally { if (e_40) throw e_40.error; }
+                        finally { if (e_39) throw e_39.error; }
                     }
-                    var e_40, _f, e_39, _e;
                 };
                 BMDRenderer.prototype.destroy = function (gl) {
                     this.arena.destroy(gl);
@@ -11508,6 +11508,7 @@ System.register("sm64ds/render", ["gl-matrix", "byml", "sm64ds/lz77", "sm64ds/ni
                     }
                 };
                 SceneDesc.prototype._createSceneFromCRG1 = function (gl, crg1) {
+                    var e_41, _a;
                     var level = crg1.Levels[this.levelId];
                     var renderers = [this._createBMDRenderer(gl, level.MapBmdFile, 100, level, false)];
                     if (level.VrboxBmdFile)
@@ -11515,8 +11516,8 @@ System.register("sm64ds/render", ["gl-matrix", "byml", "sm64ds/lz77", "sm64ds/ni
                     else
                         renderers.push(Promise.resolve(null));
                     try {
-                        for (var _a = __values(level.Objects), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var object = _b.value;
+                        for (var _b = __values(level.Objects), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var object = _c.value;
                             var objRenderer = this._createBMDRendererForObject(gl, object);
                             if (objRenderer)
                                 renderers.push(objRenderer);
@@ -11525,7 +11526,7 @@ System.register("sm64ds/render", ["gl-matrix", "byml", "sm64ds/lz77", "sm64ds/ni
                     catch (e_41_1) { e_41 = { error: e_41_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_41) throw e_41.error; }
                     }
@@ -11533,7 +11534,6 @@ System.register("sm64ds/render", ["gl-matrix", "byml", "sm64ds/lz77", "sm64ds/ni
                         var _b = __read(_a), mainBMD = _b[0], skyboxBMD = _b[1], extraBMDs = _b.slice(2);
                         return new SM64DSRenderer(mainBMD, skyboxBMD, extraBMDs);
                     });
-                    var e_41, _c;
                 };
                 return SceneDesc;
             }());
@@ -11543,8 +11543,8 @@ System.register("sm64ds/render", ["gl-matrix", "byml", "sm64ds/lz77", "sm64ds/ni
 });
 System.register("sm64ds/scenes", ["sm64ds/render"], function (exports_44, context_44) {
     "use strict";
-    var __moduleName = context_44 && context_44.id;
     var render_15, id, name, sceneDescs, sceneGroup;
+    var __moduleName = context_44 && context_44.id;
     return {
         setters: [
             function (render_15_1) {
@@ -11616,6 +11616,7 @@ System.register("sm64ds/scenes", ["sm64ds/render"], function (exports_44, contex
 });
 System.register("mdl0/mdl0", ["util"], function (exports_45, context_45) {
     "use strict";
+    var util_25;
     var __moduleName = context_45 && context_45.id;
     function parse(buffer) {
         ;
@@ -11675,7 +11676,6 @@ System.register("mdl0/mdl0", ["util"], function (exports_45, context_45) {
         return { clrData: clrData, idxData: idxData, vtxData: vtxData, animCount: animCount, animSize: animSize, vertCount: vertCount, vertSize: vertSize };
     }
     exports_45("parse", parse);
-    var util_25;
     return {
         setters: [
             function (util_25_1) {
@@ -11688,8 +11688,8 @@ System.register("mdl0/mdl0", ["util"], function (exports_45, context_45) {
 });
 System.register("mdl0/render", ["mdl0/mdl0", "render", "Program", "util", "Camera"], function (exports_46, context_46) {
     "use strict";
-    var __moduleName = context_46 && context_46.id;
     var MDL0, render_16, Program_7, util_26, Camera_6, FancyGrid_Program, FancyGrid, MDL0_Program, Scene, SceneDesc;
+    var __moduleName = context_46 && context_46.id;
     return {
         setters: [
             function (MDL0_1) {
@@ -11849,8 +11849,8 @@ System.register("mdl0/render", ["mdl0/mdl0", "render", "Program", "util", "Camer
 });
 System.register("mdl0/scenes", ["mdl0/render"], function (exports_47, context_47) {
     "use strict";
-    var __moduleName = context_47 && context_47.id;
     var render_17, name, id, sceneDescs, sceneGroup;
+    var __moduleName = context_47 && context_47.id;
     return {
         setters: [
             function (render_17_1) {
@@ -11921,6 +11921,7 @@ System.register("mdl0/scenes", ["mdl0/render"], function (exports_47, context_47
 });
 System.register("zelview/zelview0", ["gl-matrix", "zelview/f3dex2", "util"], function (exports_48, context_48) {
     "use strict";
+    var gl_matrix_11, F3DEX2, util_27, VFSEntry, ZELVIEW0, Mesh, Headers, HeaderCommands;
     var __moduleName = context_48 && context_48.id;
     function readZELVIEW0(buffer) {
         var view = buffer.createDataView();
@@ -12190,7 +12191,6 @@ System.register("zelview/zelview0", ["gl-matrix", "zelview/f3dex2", "util"], fun
         var banks = { scene: file };
         return readHeaders(gl, zelview0, file.vStart, banks);
     }
-    var gl_matrix_11, F3DEX2, util_27, VFSEntry, ZELVIEW0, Mesh, Headers, HeaderCommands;
     return {
         setters: [
             function (gl_matrix_11_1) {
@@ -12214,9 +12214,10 @@ System.register("zelview/zelview0", ["gl-matrix", "zelview/f3dex2", "util"], fun
                 function ZELVIEW0() {
                 }
                 ZELVIEW0.prototype.lookupFile = function (pStart) {
+                    var e_42, _a;
                     try {
-                        for (var _a = __values(this.entries), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var entry = _b.value;
+                        for (var _b = __values(this.entries), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var entry = _c.value;
                             if (entry.pStart === pStart)
                                 return entry;
                         }
@@ -12224,12 +12225,11 @@ System.register("zelview/zelview0", ["gl-matrix", "zelview/f3dex2", "util"], fun
                     catch (e_42_1) { e_42 = { error: e_42_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_42) throw e_42.error; }
                     }
                     return null;
-                    var e_42, _c;
                 };
                 ZELVIEW0.prototype.lookupAddress = function (banks, addr) {
                     var bankIdx = addr >>> 24;
@@ -12303,6 +12303,7 @@ System.register("zelview/zelview0", ["gl-matrix", "zelview/f3dex2", "util"], fun
 });
 System.register("zelview/f3dex2", ["gl-matrix", "zelview/render", "render"], function (exports_49, context_49) {
     "use strict";
+    var gl_matrix_12, Render, render_18, State, VERTEX_SIZE, VERTEX_BYTES, GeometryMode, OtherModeL, tileCache, CommandDispatch, F3DEX2, DL;
     var __moduleName = context_49 && context_49.id;
     function readVertex(state, which, addr) {
         var rom = state.rom;
@@ -12981,7 +12982,6 @@ System.register("zelview/f3dex2", ["gl-matrix", "zelview/render", "render"], fun
         return new DL(vao, state.cmds, state.textures);
     }
     exports_49("readDL", readDL);
-    var gl_matrix_12, Render, render_18, State, VERTEX_SIZE, VERTEX_BYTES, GeometryMode, OtherModeL, tileCache, CommandDispatch, F3DEX2, DL;
     return {
         setters: [
             function (gl_matrix_12_1) {
@@ -13058,8 +13058,8 @@ System.register("zelview/f3dex2", ["gl-matrix", "zelview/render", "render"], fun
 });
 System.register("zelview/render", ["zelview/zelview0", "render", "Program", "util"], function (exports_50, context_50) {
     "use strict";
-    var __moduleName = context_50 && context_50.id;
     var ZELVIEW0, render_19, Program_8, util_28, BillboardBGProgram, F3DEX2Program, CollisionProgram, WaterboxProgram, Scene, SceneDesc;
+    var __moduleName = context_50 && context_50.id;
     return {
         setters: [
             function (ZELVIEW0_1) {
@@ -13281,8 +13281,8 @@ System.register("zelview/render", ["zelview/zelview0", "render", "Program", "uti
 });
 System.register("zelview/scenes", ["zelview/render"], function (exports_51, context_51) {
     "use strict";
-    var __moduleName = context_51 && context_51.id;
     var render_20, id, name, sceneDescs, sceneGroup;
+    var __moduleName = context_51 && context_51.id;
     return {
         setters: [
             function (render_20_1) {
@@ -13743,6 +13743,7 @@ System.register("zelview/scenes", ["zelview/render"], function (exports_51, cont
 });
 System.register("oot3d/cmb", ["util"], function (exports_52, context_52) {
     "use strict";
+    var util_29, VertexBufferSlices, CMB, TextureFilter, TextureWrapMode, TextureBinding, Material, TextureFormat, Texture, Mesh, DataType, Prm, Sepd;
     var __moduleName = context_52 && context_52.id;
     function readMatsChunk(cmb, buffer) {
         var view = buffer.createDataView();
@@ -14158,7 +14159,6 @@ System.register("oot3d/cmb", ["util"], function (exports_52, context_52) {
         return cmb;
     }
     exports_52("parse", parse);
-    var util_29, VertexBufferSlices, CMB, TextureFilter, TextureWrapMode, TextureBinding, Material, TextureFormat, Texture, Mesh, DataType, Prm, Sepd;
     return {
         setters: [
             function (util_29_1) {
@@ -14256,6 +14256,7 @@ System.register("oot3d/cmb", ["util"], function (exports_52, context_52) {
 });
 System.register("oot3d/zsi", ["oot3d/cmb", "util"], function (exports_53, context_53) {
     "use strict";
+    var CMB, util_30, ZSI, HeaderCommands, Mesh;
     var __moduleName = context_53 && context_53.id;
     function readRooms(buffer, nRooms, offs) {
         var rooms = [];
@@ -14350,7 +14351,6 @@ System.register("oot3d/zsi", ["oot3d/cmb", "util"], function (exports_53, contex
         return readHeaders(headersBuf);
     }
     exports_53("parse", parse);
-    var CMB, util_30, ZSI, HeaderCommands, Mesh;
     return {
         setters: [
             function (CMB_1) {
@@ -14385,6 +14385,7 @@ System.register("oot3d/zsi", ["oot3d/cmb", "util"], function (exports_53, contex
 });
 System.register("oot3d/render", ["oot3d/cmb", "oot3d/zsi", "Progressable", "render", "Program", "RenderArena", "util"], function (exports_54, context_54) {
     "use strict";
+    var CMB, ZSI, Progressable_5, render_21, Program_9, RenderArena_2, util_31, OoT3D_Program, Scene, MultiScene, SceneDesc;
     var __moduleName = context_54 && context_54.id;
     function textureToCanvas(texture) {
         var canvas = document.createElement("canvas");
@@ -14404,7 +14405,6 @@ System.register("oot3d/render", ["oot3d/cmb", "oot3d/zsi", "Progressable", "rend
         parts.pop();
         return parts.join('/');
     }
-    var CMB, ZSI, Progressable_5, render_21, Program_9, RenderArena_2, util_31, OoT3D_Program, Scene, MultiScene, SceneDesc;
     return {
         setters: [
             function (CMB_2) {
@@ -14505,24 +14505,24 @@ System.register("oot3d/render", ["oot3d/cmb", "oot3d/zsi", "Progressable", "rend
                     gl.enableVertexAttribArray(OoT3D_Program.a_uv);
                     gl.bindVertexArray(null);
                     return function () {
+                        var e_43, _a;
                         gl.uniform1f(_this.program.uvScaleLocation, sepd.txcScale);
                         gl.uniform1f(_this.program.posScaleLocation, sepd.posScale);
                         gl.bindVertexArray(vao);
                         try {
-                            for (var _a = __values(sepd.prms), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                var prm = _b.value;
+                            for (var _b = __values(sepd.prms), _c = _b.next(); !_c.done; _c = _b.next()) {
+                                var prm = _c.value;
                                 gl.drawElements(gl.TRIANGLES, prm.count, _this.translateDataType(gl, prm.indexType), prm.offset * _this.dataTypeSize(prm.indexType));
                             }
                         }
                         catch (e_43_1) { e_43 = { error: e_43_1 }; }
                         finally {
                             try {
-                                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                             }
                             finally { if (e_43) throw e_43.error; }
                         }
                         gl.bindVertexArray(null);
-                        var e_43, _c;
                     };
                 };
                 Scene.prototype.translateTexture = function (gl, texture) {
@@ -14608,6 +14608,7 @@ System.register("oot3d/render", ["oot3d/cmb", "oot3d/zsi", "Progressable", "rend
                     cmbContext.matFuncs = cmb.materials.map(function (material) { return _this.translateMaterial(gl, cmbContext, material); });
                     var meshFuncs = cmb.meshs.map(function (mesh) { return _this.translateMesh(gl, cmbContext, mesh); });
                     return function () {
+                        var e_44, _a;
                         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuffer);
                         try {
                             for (var meshFuncs_1 = __values(meshFuncs), meshFuncs_1_1 = meshFuncs_1.next(); !meshFuncs_1_1.done; meshFuncs_1_1 = meshFuncs_1.next()) {
@@ -14622,7 +14623,6 @@ System.register("oot3d/render", ["oot3d/cmb", "oot3d/zsi", "Progressable", "rend
                             }
                             finally { if (e_44) throw e_44.error; }
                         }
-                        var e_44, _a;
                     };
                 };
                 Scene.prototype.translateModel = function (gl, mesh) {
@@ -14645,22 +14645,22 @@ System.register("oot3d/render", ["oot3d/cmb", "oot3d/zsi", "Progressable", "rend
             }());
             MultiScene = /** @class */ (function () {
                 function MultiScene(scenes) {
+                    var e_45, _a;
                     this.scenes = scenes;
                     this.textures = [];
                     try {
-                        for (var _a = __values(this.scenes), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var scene = _b.value;
+                        for (var _b = __values(this.scenes), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var scene = _c.value;
                             this.textures = this.textures.concat(scene.textures);
                         }
                     }
                     catch (e_45_1) { e_45 = { error: e_45_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_45) throw e_45.error; }
                     }
-                    var e_45, _c;
                 }
                 MultiScene.prototype.render = function (renderState) {
                     this.scenes.forEach(function (scene) {
@@ -14712,8 +14712,8 @@ System.register("oot3d/render", ["oot3d/cmb", "oot3d/zsi", "Progressable", "rend
 });
 System.register("oot3d/scenes", ["oot3d/render"], function (exports_55, context_55) {
     "use strict";
-    var __moduleName = context_55 && context_55.id;
     var render_22, id, name, sceneDescs, sceneGroup;
+    var __moduleName = context_55 && context_55.id;
     return {
         setters: [
             function (render_22_1) {
@@ -14833,6 +14833,7 @@ System.register("oot3d/scenes", ["oot3d/render"], function (exports_55, context_
 // Nintendo SARC archive format.
 System.register("fres/sarc", ["util"], function (exports_56, context_56) {
     "use strict";
+    var util_32;
     var __moduleName = context_56 && context_56.id;
     function parse(buffer) {
         var view = buffer.createDataView();
@@ -14882,7 +14883,6 @@ System.register("fres/sarc", ["util"], function (exports_56, context_56) {
         return { buffer: buffer, files: files };
     }
     exports_56("parse", parse);
-    var util_32;
     return {
         setters: [
             function (util_32_1) {
@@ -14895,6 +14895,7 @@ System.register("fres/sarc", ["util"], function (exports_56, context_56) {
 });
 System.register("worker_util", ["util"], function (exports_57, context_57) {
     "use strict";
+    var util_33, WorkerManager, WorkerPool;
     var __moduleName = context_57 && context_57.id;
     function makeWorkerFromSource(sources) {
         var blob = new Blob(sources, { type: 'application/javascript' });
@@ -14904,7 +14905,6 @@ System.register("worker_util", ["util"], function (exports_57, context_57) {
         return w;
     }
     exports_57("makeWorkerFromSource", makeWorkerFromSource);
-    var util_33, WorkerManager, WorkerPool;
     return {
         setters: [
             function (util_33_1) {
@@ -14947,21 +14947,21 @@ System.register("worker_util", ["util"], function (exports_57, context_57) {
                     this.workers = [];
                 }
                 WorkerPool.prototype.terminate = function () {
+                    var e_46, _a;
                     try {
-                        for (var _a = __values(this.workers), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var worker = _b.value;
+                        for (var _b = __values(this.workers), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var worker = _c.value;
                             worker.terminate();
                         }
                     }
                     catch (e_46_1) { e_46 = { error: e_46_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_46) throw e_46.error; }
                     }
                     this.workers = [];
-                    var e_46, _c;
                 };
                 WorkerPool.prototype.build = function () {
                     if (this.workers.length > 0)
@@ -14991,9 +14991,10 @@ System.register("worker_util", ["util"], function (exports_57, context_57) {
                     this.outstandingRequests.splice(i, 0, workerManagerRequest);
                 };
                 WorkerPool.prototype.pumpQueue = function () {
+                    var e_47, _a;
                     try {
-                        for (var _a = __values(this.workers), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var worker = _b.value;
+                        for (var _b = __values(this.workers), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var worker = _c.value;
                             if (this.outstandingRequests.length === 0)
                                 return;
                             if (worker.isFree()) {
@@ -15005,11 +15006,10 @@ System.register("worker_util", ["util"], function (exports_57, context_57) {
                     catch (e_47_1) { e_47 = { error: e_47_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_47) throw e_47.error; }
                     }
-                    var e_47, _c;
                 };
                 WorkerPool.prototype._onWorkerDone = function () {
                     this.pumpQueue();
@@ -15022,6 +15022,7 @@ System.register("worker_util", ["util"], function (exports_57, context_57) {
 });
 System.register("fres/gx2_swizzle", ["worker_util"], function (exports_58, context_58) {
     "use strict";
+    var worker_util_1, Deswizzler, deswizzler;
     var __moduleName = context_58 && context_58.id;
     // This is all contained in one function in order to make it easier to Worker-ize.
     function _deswizzle(inSurface, srcBuffer, mipLevel) {
@@ -15308,7 +15309,6 @@ System.register("fres/gx2_swizzle", ["worker_util"], function (exports_58, conte
             'deswizzleWorker(this)',
         ]);
     }
-    var worker_util_1, Deswizzler, deswizzler;
     return {
         setters: [
             function (worker_util_1_1) {
@@ -15338,6 +15338,7 @@ System.register("fres/gx2_swizzle", ["worker_util"], function (exports_58, conte
 });
 System.register("fres/gx2_texture", ["fres/gx2_swizzle"], function (exports_59, context_59) {
     "use strict";
+    var gx2_swizzle_1;
     var __moduleName = context_59 && context_59.id;
     // #region Texture Decode
     function expand5to8(n) {
@@ -15699,7 +15700,6 @@ System.register("fres/gx2_texture", ["fres/gx2_swizzle"], function (exports_59, 
         }
     }
     exports_59("decompressSurface", decompressSurface);
-    var gx2_swizzle_1;
     return {
         setters: [
             function (gx2_swizzle_1_1) {
@@ -15712,6 +15712,7 @@ System.register("fres/gx2_texture", ["fres/gx2_swizzle"], function (exports_59, 
 });
 System.register("fres/render", ["fres/gx2_swizzle", "fres/gx2_texture", "render", "Program", "RenderArena", "util", "ArrayBufferSlice", "BufferCoalescer"], function (exports_60, context_60) {
     "use strict";
+    var gx2_swizzle_2, GX2Texture, render_23, Program_10, RenderArena_3, util_34, ArrayBufferSlice_6, BufferCoalescer_2, ProgramGambit_UBER, Scene;
     var __moduleName = context_60 && context_60.id;
     function getAttribFormatInfo(format) {
         switch (format) {
@@ -15854,7 +15855,6 @@ System.register("fres/render", ["fres/gx2_swizzle", "fres/gx2_texture", "render"
         }
         throw new Error("whoops");
     }
-    var gx2_swizzle_2, GX2Texture, render_23, Program_10, RenderArena_3, util_34, ArrayBufferSlice_6, BufferCoalescer_2, ProgramGambit_UBER, Scene;
     return {
         setters: [
             function (gx2_swizzle_2_1) {
@@ -16039,6 +16039,7 @@ System.register("fres/render", ["fres/gx2_swizzle", "fres/gx2_texture", "render"
                 };
                 Scene.prototype.translateFMAT = function (gl, fmat) {
                     var _this = this;
+                    var e_48, _a;
                     var attribNames = ['_a0', '_e0', '_n0', '_s0'];
                     var textureAssigns = fmat.textureAssigns.filter(function (textureAssign) {
                         return attribNames.includes(textureAssign.attribName);
@@ -16103,7 +16104,6 @@ System.register("fres/render", ["fres/gx2_swizzle", "fres/gx2_texture", "render"
                             _loop_10(i);
                         }
                     };
-                    var e_48, _a;
                 };
                 Scene.prototype.translateIndexBuffer = function (indexFormat, indexBufferData) {
                     switch (indexFormat) {
@@ -16117,9 +16117,10 @@ System.register("fres/render", ["fres/gx2_swizzle", "fres/gx2_texture", "render"
                     }
                 };
                 Scene.prototype.translateFSHPBuffers = function (fshp, indexDatas) {
+                    var e_49, _a;
                     try {
-                        for (var _a = __values(fshp.meshes), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var mesh = _b.value;
+                        for (var _b = __values(fshp.meshes), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var mesh = _c.value;
                             util_34.assert(mesh.indexBufferData.stride === 0);
                             var indexData = this.translateIndexBuffer(mesh.indexFormat, mesh.indexBufferData.data);
                             indexDatas.push(indexData);
@@ -16128,11 +16129,10 @@ System.register("fres/render", ["fres/gx2_swizzle", "fres/gx2_texture", "render"
                     catch (e_49_1) { e_49 = { error: e_49_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_49) throw e_49.error; }
                     }
-                    var e_49, _c;
                 };
                 Scene.prototype.translateIndexFormat = function (gl, indexFormat) {
                     // Little-endian translation was done above.
@@ -16157,41 +16157,41 @@ System.register("fres/render", ["fres/gx2_swizzle", "fres/gx2_texture", "render"
                 };
                 Scene.prototype.translateFSHP = function (gl, fshp, coalescedIndex) {
                     var _this = this;
+                    var e_50, _a;
                     var glIndexBuffers = [];
                     try {
-                        for (var _a = __values(fshp.meshes), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var mesh = _b.value;
+                        for (var _b = __values(fshp.meshes), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var mesh = _c.value;
                             glIndexBuffers.push(coalescedIndex.shift());
                         }
                     }
                     catch (e_50_1) { e_50 = { error: e_50_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_50) throw e_50.error; }
                     }
                     return function (state) {
+                        var e_51, _a;
                         var lod = 0;
                         var mesh = fshp.meshes[lod];
                         var glIndexBuffer = glIndexBuffers[lod];
                         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glIndexBuffer.buffer);
                         try {
-                            for (var _a = __values(mesh.submeshes), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                var submesh = _b.value;
+                            for (var _b = __values(mesh.submeshes), _c = _b.next(); !_c.done; _c = _b.next()) {
+                                var submesh = _c.value;
                                 gl.drawElements(_this.translatePrimType(gl, mesh.primType), submesh.indexBufferCount, _this.translateIndexFormat(gl, mesh.indexFormat), glIndexBuffer.offset + submesh.indexBufferOffset);
                             }
                         }
                         catch (e_51_1) { e_51 = { error: e_51_1 }; }
                         finally {
                             try {
-                                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                             }
                             finally { if (e_51) throw e_51.error; }
                         }
-                        var e_51, _c;
                     };
-                    var e_50, _c;
                 };
                 Scene.prototype.translateModel = function (gl, model, coalescedVertex, coalescedIndex) {
                     var _this = this;
@@ -16364,8 +16364,10 @@ System.register("fres/render", ["fres/gx2_swizzle", "fres/gx2_texture", "render"
 });
 System.register("fres/scenes", ["fres/bfres", "fres/sarc", "compression/Yaz0", "fres/render", "util"], function (exports_61, context_61) {
     "use strict";
+    var BFRES, SARC, Yaz0, render_24, util_35, FRESRenderer;
     var __moduleName = context_61 && context_61.id;
     function collectTextures(scenes) {
+        var e_52, _a;
         var textures = [];
         try {
             for (var scenes_5 = __values(scenes), scenes_5_1 = scenes_5.next(); !scenes_5_1.done; scenes_5_1 = scenes_5.next()) {
@@ -16382,7 +16384,6 @@ System.register("fres/scenes", ["fres/bfres", "fres/sarc", "compression/Yaz0", "
             finally { if (e_52) throw e_52.error; }
         }
         return textures;
-        var e_52, _a;
     }
     function createSceneFromFRESBuffer(gl, buffer, isSkybox) {
         if (isSkybox === void 0) { isSkybox = false; }
@@ -16404,7 +16405,6 @@ System.register("fres/scenes", ["fres/bfres", "fres/sarc", "compression/Yaz0", "
         });
     }
     exports_61("createSceneFromSARCBuffer", createSceneFromSARCBuffer);
-    var BFRES, SARC, Yaz0, render_24, util_35, FRESRenderer;
     return {
         setters: [
             function (BFRES_1) {
@@ -16447,12 +16447,14 @@ System.register("fres/scenes", ["fres/bfres", "fres/sarc", "compression/Yaz0", "
 });
 System.register("fres/splatoon_scenes", ["fres/scenes", "Progressable", "util"], function (exports_62, context_62) {
     "use strict";
+    var scenes_6, Progressable_6, util_36, SplatoonRenderer, SplatoonSceneDesc, name, id, sceneDescs, sceneGroup;
     var __moduleName = context_62 && context_62.id;
     function collectTextures(scenes) {
+        var e_53, _a;
         var textures = [];
         try {
-            for (var scenes_6 = __values(scenes), scenes_6_1 = scenes_6.next(); !scenes_6_1.done; scenes_6_1 = scenes_6.next()) {
-                var scene = scenes_6_1.value;
+            for (var scenes_7 = __values(scenes), scenes_7_1 = scenes_7.next(); !scenes_7_1.done; scenes_7_1 = scenes_7.next()) {
+                var scene = scenes_7_1.value;
                 if (scene)
                     textures.push.apply(textures, scene.textures);
             }
@@ -16460,18 +16462,16 @@ System.register("fres/splatoon_scenes", ["fres/scenes", "Progressable", "util"],
         catch (e_53_1) { e_53 = { error: e_53_1 }; }
         finally {
             try {
-                if (scenes_6_1 && !scenes_6_1.done && (_a = scenes_6.return)) _a.call(scenes_6);
+                if (scenes_7_1 && !scenes_7_1.done && (_a = scenes_7.return)) _a.call(scenes_7);
             }
             finally { if (e_53) throw e_53.error; }
         }
         return textures;
-        var e_53, _a;
     }
-    var scenes_7, Progressable_6, util_36, SplatoonRenderer, SplatoonSceneDesc, name, id, sceneDescs, sceneGroup;
     return {
         setters: [
-            function (scenes_7_1) {
-                scenes_7 = scenes_7_1;
+            function (scenes_6_1) {
+                scenes_6 = scenes_6_1;
             },
             function (Progressable_6_1) {
                 Progressable_6 = Progressable_6_1;
@@ -16523,7 +16523,7 @@ System.register("fres/splatoon_scenes", ["fres/scenes", "Progressable", "util"],
                 };
                 SplatoonSceneDesc.prototype._createSceneFromPath = function (gl, path, isSkybox) {
                     return util_36.fetch(path).then(function (result) {
-                        return scenes_7.createSceneFromSARCBuffer(gl, result, isSkybox);
+                        return scenes_6.createSceneFromSARCBuffer(gl, result, isSkybox);
                     });
                 };
                 return SplatoonSceneDesc;
@@ -16591,8 +16591,8 @@ System.register("dksiv/iv", [], function (exports_63, context_63) {
 });
 System.register("dksiv/render", ["gl-matrix", "render", "Program"], function (exports_64, context_64) {
     "use strict";
-    var __moduleName = context_64 && context_64.id;
     var gl_matrix_13, render_25, Program_11, IVProgram, Chunk, Scene;
+    var __moduleName = context_64 && context_64.id;
     return {
         setters: [
             function (gl_matrix_13_1) {
@@ -16734,8 +16734,8 @@ System.register("dksiv/render", ["gl-matrix", "render", "Program"], function (ex
 });
 System.register("dksiv/scenes", ["dksiv/iv", "dksiv/render", "ui", "Progressable", "util"], function (exports_65, context_65) {
     "use strict";
-    var __moduleName = context_65 && context_65.id;
     var iv_1, render_26, UI, Progressable_7, util_37, dks1Paths, dks2Paths, MultiScene, SceneDesc, sceneDescs, name, id, sceneGroup;
+    var __moduleName = context_65 && context_65.id;
     return {
         setters: [
             function (iv_1_1) {
@@ -16802,22 +16802,22 @@ System.register("dksiv/scenes", ["dksiv/iv", "dksiv/render", "ui", "Progressable
             ];
             MultiScene = /** @class */ (function () {
                 function MultiScene(scenes) {
+                    var e_54, _a;
                     this.scenes = scenes;
                     this.textures = [];
                     try {
-                        for (var _a = __values(this.scenes), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var scene = _b.value;
+                        for (var _b = __values(this.scenes), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var scene = _c.value;
                             this.textures = this.textures.concat(scene.textures);
                         }
                     }
                     catch (e_54_1) { e_54 = { error: e_54_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_54) throw e_54.error; }
                     }
-                    var e_54, _c;
                 }
                 MultiScene.prototype.createPanels = function () {
                     var layers = new UI.LayerPanel();
@@ -16870,6 +16870,7 @@ System.register("dksiv/scenes", ["dksiv/iv", "dksiv/render", "ui", "Progressable
 // Implements Retro's PAK format as seen in Metroid Prime 1.
 System.register("metroid_prime/pak", ["util"], function (exports_66, context_66) {
     "use strict";
+    var util_38;
     var __moduleName = context_66 && context_66.id;
     function parse(buffer) {
         var view = buffer.createDataView();
@@ -16931,7 +16932,6 @@ System.register("metroid_prime/pak", ["util"], function (exports_66, context_66)
         return { namedResourceTable: namedResourceTable, resourceTable: resourceTable };
     }
     exports_66("parse", parse);
-    var util_38;
     return {
         setters: [
             function (util_38_1) {
@@ -16945,6 +16945,7 @@ System.register("metroid_prime/pak", ["util"], function (exports_66, context_66)
 // Implements Retro's TXTR (texture) format as seen in Metroid Prime 1.
 System.register("metroid_prime/txtr", ["gx/gx_texture"], function (exports_67, context_67) {
     "use strict";
+    var GX_Texture, txtrFormatRemap;
     var __moduleName = context_67 && context_67.id;
     function parse(resourceSystem, assetID, buffer) {
         var view = buffer.createDataView();
@@ -16974,7 +16975,6 @@ System.register("metroid_prime/txtr", ["gx/gx_texture"], function (exports_67, c
         return { name: name, format: format, width: width, height: height, mipCount: mipCount, data: data, paletteFormat: paletteFormat, paletteData: paletteData };
     }
     exports_67("parse", parse);
-    var GX_Texture, txtrFormatRemap;
     return {
         setters: [
             function (GX_Texture_2) {
@@ -17001,6 +17001,7 @@ System.register("metroid_prime/txtr", ["gx/gx_texture"], function (exports_67, c
 // Implements Retro's MREA format as seen in Metroid Prime 1.
 System.register("metroid_prime/mrea", ["gx/gx_material", "util", "gx/gx_displaylist", "Camera"], function (exports_68, context_68) {
     "use strict";
+    var GX_Material, util_39, gx_displaylist_2, Camera_7, vtxAttrFormats;
     var __moduleName = context_68 && context_68.id;
     function parseMaterialSet(resourceSystem, buffer, offs) {
         var view = buffer.createDataView();
@@ -17257,6 +17258,7 @@ System.register("metroid_prime/mrea", ["gx/gx_material", "util", "gx/gx_displayl
         return { textures: textures, textureRemapTable: textureRemapTable, materials: materials };
     }
     function parseGeometry(resourceSystem, buffer, materialSet, sectionTables, sectionIndex) {
+        var e_55, _a;
         var sectionOffsTable = sectionTables.dataSectionOffsTable;
         var sectionSizeTable = sectionTables.dataSectionSizeTable;
         var view = buffer.createDataView();
@@ -17359,9 +17361,9 @@ System.register("metroid_prime/mrea", ["gx/gx_material", "util", "gx/gx_displayl
         }
         var geometry = { surfaces: surfaces };
         return [geometry, sectionIndex];
-        var e_55, _a;
     }
     function parse(resourceSystem, assetID, buffer) {
+        var _a;
         var view = buffer.createDataView();
         util_39.assert(view.getUint32(0x00) === 0xDEADBEEF);
         var version = view.getUint32(0x04);
@@ -17413,10 +17415,8 @@ System.register("metroid_prime/mrea", ["gx/gx_material", "util", "gx/gx_displayl
             worldModels.push({ geometry: geometry, bbox: bbox });
         }
         return { materialSet: materialSet, worldModels: worldModels };
-        var _a;
     }
     exports_68("parse", parse);
-    var GX_Material, util_39, gx_displaylist_2, Camera_7, vtxAttrFormats;
     return {
         setters: [
             function (GX_Material_5) {
@@ -17452,6 +17452,7 @@ System.register("metroid_prime/mrea", ["gx/gx_material", "util", "gx/gx_displayl
 // Implements Retro's STRG (string table resource group) format as seen in Metroid Prime 1.
 System.register("metroid_prime/strg", ["util"], function (exports_69, context_69) {
     "use strict";
+    var util_40, utf16Decoder;
     var __moduleName = context_69 && context_69.id;
     function readUTF16String(buffer, offs) {
         var arr = buffer.createTypedArray(Uint8Array, offs, 0xFF);
@@ -17496,7 +17497,6 @@ System.register("metroid_prime/strg", ["util"], function (exports_69, context_69
         return { strings: strings };
     }
     exports_69("parse", parse);
-    var util_40, utf16Decoder;
     return {
         setters: [
             function (util_40_1) {
@@ -17511,8 +17511,8 @@ System.register("metroid_prime/strg", ["util"], function (exports_69, context_69
 // Resource System
 System.register("metroid_prime/resource", ["pako", "metroid_prime/mlvl", "metroid_prime/mrea", "metroid_prime/strg", "metroid_prime/txtr", "util", "ArrayBufferSlice"], function (exports_70, context_70) {
     "use strict";
-    var __moduleName = context_70 && context_70.id;
     var pako_1, MLVL, MREA, STRG, TXTR, util_41, ArrayBufferSlice_7, FourCCLoaders, ResourceSystem;
+    var __moduleName = context_70 && context_70.id;
     return {
         setters: [
             function (pako_1_1) {
@@ -17560,10 +17560,11 @@ System.register("metroid_prime/resource", ["pako", "metroid_prime/mlvl", "metroi
                     }
                 };
                 ResourceSystem.prototype.findResourceByID = function (assetID) {
+                    var e_56, _a;
                     util_41.assert(assetID.length === 4);
                     try {
-                        for (var _a = __values(this.paks), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var pak = _b.value;
+                        for (var _b = __values(this.paks), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var pak = _c.value;
                             var resource = pak.resourceTable.get(assetID);
                             if (resource)
                                 return resource;
@@ -17572,12 +17573,11 @@ System.register("metroid_prime/resource", ["pako", "metroid_prime/mlvl", "metroi
                     catch (e_56_1) { e_56 = { error: e_56_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_56) throw e_56.error; }
                     }
                     return null;
-                    var e_56, _c;
                 };
                 ResourceSystem.prototype.loadAssetByID = function (assetID, fourCC) {
                     var cached = this._cache.get(assetID);
@@ -17602,6 +17602,7 @@ System.register("metroid_prime/resource", ["pako", "metroid_prime/mlvl", "metroi
 // Implements Retro's MLVL format as seen in Metroid Prime 1.
 System.register("metroid_prime/mlvl", ["util"], function (exports_71, context_71) {
     "use strict";
+    var util_42;
     var __moduleName = context_71 && context_71.id;
     function parse(resourceSystem, assetID, buffer) {
         var view = buffer.createDataView();
@@ -17684,7 +17685,6 @@ System.register("metroid_prime/mlvl", ["util"], function (exports_71, context_71
         return { areaTable: areaTable };
     }
     exports_71("parse", parse);
-    var util_42;
     return {
         setters: [
             function (util_42_1) {
@@ -17697,8 +17697,8 @@ System.register("metroid_prime/mlvl", ["util"], function (exports_71, context_71
 });
 System.register("metroid_prime/render", ["gl-matrix", "gx/gx_texture", "gx/gx_material", "gx/gx_render", "util", "ArrayBufferSlice", "BufferCoalescer", "Camera"], function (exports_72, context_72) {
     "use strict";
-    var __moduleName = context_72 && context_72.id;
     var gl_matrix_14, GX_Texture, GX_Material, gx_render_2, util_43, ArrayBufferSlice_8, BufferCoalescer_3, Camera_8, fixPrimeUsingTheWrongConventionYesIKnowItsFromMayaButMayaIsStillWrong, posScale, posMtx, textureMappingScratch, Scene, Command_Surface, Command_Material;
+    var __moduleName = context_72 && context_72.id;
     return {
         setters: [
             function (gl_matrix_14_1) {
@@ -17908,6 +17908,7 @@ System.register("metroid_prime/render", ["gl-matrix", "gx/gx_texture", "gx/gx_ma
 });
 System.register("metroid_prime/scenes", ["metroid_prime/pak", "metroid_prime/resource", "metroid_prime/render", "util", "Progressable"], function (exports_73, context_73) {
     "use strict";
+    var PAK, resource_1, render_27, util_44, Progressable_8, pakBase, MultiScene, MP1SceneDesc, id, name, sceneDescs, sceneGroup;
     var __moduleName = context_73 && context_73.id;
     // Files are too big for GitHub.
     function findPakBase() {
@@ -17918,7 +17919,6 @@ System.register("metroid_prime/scenes", ["metroid_prime/pak", "metroid_prime/res
             return "https://funny.computer/cloud/MetroidPrime1/";
         }
     }
-    var PAK, resource_1, render_27, util_44, Progressable_8, pakBase, MultiScene, MP1SceneDesc, id, name, sceneDescs, sceneGroup;
     return {
         setters: [
             function (PAK_1) {
@@ -17944,22 +17944,22 @@ System.register("metroid_prime/scenes", ["metroid_prime/pak", "metroid_prime/res
                     this.setScenes(scenes);
                 }
                 MultiScene.prototype.setScenes = function (scenes) {
+                    var e_57, _a;
                     this.scenes = scenes;
                     this.textures = [];
                     try {
-                        for (var _a = __values(this.scenes), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var scene = _b.value;
+                        for (var _b = __values(this.scenes), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var scene = _c.value;
                             this.textures = this.textures.concat(scene.textures);
                         }
                     }
                     catch (e_57_1) { e_57 = { error: e_57_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_57) throw e_57.error; }
                     }
-                    var e_57, _c;
                 };
                 MultiScene.prototype.render = function (renderState) {
                     this.scenes.forEach(function (scene) {
@@ -17987,11 +17987,12 @@ System.register("metroid_prime/scenes", ["metroid_prime/pak", "metroid_prime/res
                     var _this = this;
                     var paks = [pakBase + "/" + this.filename, pakBase + "/Strings.pak"];
                     return Progressable_8.default.all(paks.map(function (pakPath) { return _this.fetchPak(pakPath); })).then(function (paks) {
+                        var e_58, _a;
                         var resourceSystem = new resource_1.ResourceSystem(paks);
                         var levelPak = paks[0];
                         try {
-                            for (var _a = __values(levelPak.namedResourceTable.values()), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                var mlvlEntry = _b.value;
+                            for (var _b = __values(levelPak.namedResourceTable.values()), _c = _b.next(); !_c.done; _c = _b.next()) {
+                                var mlvlEntry = _c.value;
                                 util_44.assert(mlvlEntry.fourCC === 'MLVL');
                                 var mlvl = resourceSystem.loadAssetByID(mlvlEntry.fileID, mlvlEntry.fourCC);
                                 // Crash my browser please.
@@ -18006,12 +18007,11 @@ System.register("metroid_prime/scenes", ["metroid_prime/pak", "metroid_prime/res
                         catch (e_58_1) { e_58 = { error: e_58_1 }; }
                         finally {
                             try {
-                                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                             }
                             finally { if (e_58) throw e_58.error; }
                         }
                         return null;
-                        var e_58, _c;
                     });
                 };
                 return MP1SceneDesc;
@@ -18052,6 +18052,7 @@ System.register("metroid_prime/scenes", ["metroid_prime/pak", "metroid_prime/res
 //         Copy Length+2 bytes from Offset back in the output buffer.
 System.register("compression/Yay0", ["util", "ArrayBufferSlice"], function (exports_74, context_74) {
     "use strict";
+    var util_45, ArrayBufferSlice_9;
     var __moduleName = context_74 && context_74.id;
     function decompress(srcBuffer) {
         var srcView = srcBuffer.createDataView();
@@ -18091,7 +18092,6 @@ System.register("compression/Yay0", ["util", "ArrayBufferSlice"], function (expo
         }
     }
     exports_74("decompress", decompress);
-    var util_45, ArrayBufferSlice_9;
     return {
         setters: [
             function (util_45_1) {
@@ -18107,6 +18107,7 @@ System.register("compression/Yay0", ["util", "ArrayBufferSlice"], function (expo
 });
 System.register("luigis_mansion/bin", ["util", "gl-matrix", "gx/gx_displaylist", "gx/gx_material"], function (exports_75, context_75) {
     "use strict";
+    var util_46, gl_matrix_15, gx_displaylist_3, GX_Material;
     var __moduleName = context_75 && context_75.id;
     function parse(buffer) {
         var view = buffer.createDataView();
@@ -18356,7 +18357,6 @@ System.register("luigis_mansion/bin", ["util", "gl-matrix", "gx/gx_displaylist",
         return bin;
     }
     exports_75("parse", parse);
-    var util_46, gl_matrix_15, gx_displaylist_3, GX_Material;
     return {
         setters: [
             function (util_46_1) {
@@ -18378,8 +18378,8 @@ System.register("luigis_mansion/bin", ["util", "gl-matrix", "gx/gx_displaylist",
 });
 System.register("luigis_mansion/render", ["gx/gx_texture", "gx/gx_material", "gx/gx_render", "util", "gl-matrix"], function (exports_76, context_76) {
     "use strict";
-    var __moduleName = context_76 && context_76.id;
     var GX_Texture, GX_Material, gx_render_3, util_47, gl_matrix_16, Command_Material, Command_Batch, sceneParamsData, BinScene;
+    var __moduleName = context_76 && context_76.id;
     return {
         setters: [
             function (GX_Texture_4) {
@@ -18496,62 +18496,62 @@ System.register("luigis_mansion/render", ["gx/gx_texture", "gx/gx_material", "gx
                     this.commands.push(batchCommand);
                 };
                 BinScene.prototype.translateSceneGraph = function (gl, node) {
+                    var e_59, _a, e_60, _b;
                     try {
-                        for (var _a = __values(node.parts), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var part = _b.value;
+                        for (var _c = __values(node.parts), _d = _c.next(); !_d.done; _d = _c.next()) {
+                            var part = _d.value;
                             this.translatePart(gl, node, part);
                         }
                     }
                     catch (e_59_1) { e_59 = { error: e_59_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                         }
                         finally { if (e_59) throw e_59.error; }
                     }
                     try {
-                        for (var _d = __values(node.children), _e = _d.next(); !_e.done; _e = _d.next()) {
-                            var child = _e.value;
+                        for (var _e = __values(node.children), _f = _e.next(); !_f.done; _f = _e.next()) {
+                            var child = _f.value;
                             this.translateSceneGraph(gl, child);
                         }
                     }
                     catch (e_60_1) { e_60 = { error: e_60_1 }; }
                     finally {
                         try {
-                            if (_e && !_e.done && (_f = _d.return)) _f.call(_d);
+                            if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                         }
                         finally { if (e_60) throw e_60.error; }
                     }
-                    var e_59, _c, e_60, _f;
                 };
                 BinScene.prototype.collectBatches = function (batches, node) {
+                    var e_61, _a, e_62, _b;
                     try {
-                        for (var _a = __values(node.parts), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var part = _b.value;
+                        for (var _c = __values(node.parts), _d = _c.next(); !_d.done; _d = _c.next()) {
+                            var part = _d.value;
                             batches.push(part.batch);
                         }
                     }
                     catch (e_61_1) { e_61 = { error: e_61_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                         }
                         finally { if (e_61) throw e_61.error; }
                     }
                     try {
-                        for (var _d = __values(node.children), _e = _d.next(); !_e.done; _e = _d.next()) {
-                            var child = _e.value;
+                        for (var _e = __values(node.children), _f = _e.next(); !_f.done; _f = _e.next()) {
+                            var child = _f.value;
                             this.collectBatches(batches, child);
                         }
                     }
                     catch (e_62_1) { e_62 = { error: e_62_1 }; }
                     finally {
                         try {
-                            if (_e && !_e.done && (_f = _d.return)) _f.call(_d);
+                            if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                         }
                         finally { if (e_62) throw e_62.error; }
                     }
-                    var e_61, _c, e_62, _f;
                 };
                 BinScene.prototype.translateModel = function (gl, bin) {
                     for (var i = 0; i < bin.samplers.length; i++) {
@@ -18583,12 +18583,14 @@ System.register("luigis_mansion/render", ["gx/gx_texture", "gx/gx_material", "gx
 });
 System.register("luigis_mansion/scenes", ["Progressable", "compression/Yay0", "util", "j3d/rarc", "luigis_mansion/bin", "luigis_mansion/render", "ui", "j3d/scenes", "j3d/render"], function (exports_77, context_77) {
     "use strict";
+    var Progressable_9, Yay0, util_48, RARC, BIN, render_28, UI, scenes_8, render_29, LuigisMansionScene, LuigisMansionBinSceneDesc, map2RoomsPaths, id, name, sceneDescs, sceneGroup;
     var __moduleName = context_77 && context_77.id;
     function collectTextures(scenes) {
+        var e_63, _a;
         var textures = [];
         try {
-            for (var scenes_8 = __values(scenes), scenes_8_1 = scenes_8.next(); !scenes_8_1.done; scenes_8_1 = scenes_8.next()) {
-                var scene = scenes_8_1.value;
+            for (var scenes_9 = __values(scenes), scenes_9_1 = scenes_9.next(); !scenes_9_1.done; scenes_9_1 = scenes_9.next()) {
+                var scene = scenes_9_1.value;
                 if (scene)
                     textures.push.apply(textures, scene.textures);
             }
@@ -18596,18 +18598,17 @@ System.register("luigis_mansion/scenes", ["Progressable", "compression/Yay0", "u
         catch (e_63_1) { e_63 = { error: e_63_1 }; }
         finally {
             try {
-                if (scenes_8_1 && !scenes_8_1.done && (_a = scenes_8.return)) _a.call(scenes_8);
+                if (scenes_9_1 && !scenes_9_1.done && (_a = scenes_9.return)) _a.call(scenes_9);
             }
             finally { if (e_63) throw e_63.error; }
         }
         return textures;
-        var e_63, _a;
     }
     function fetchVRBScene(gl, path) {
         return util_48.fetch("data/luigis_mansion/" + path).then(function (buffer) {
             var decompressed = Yay0.decompress(buffer);
-            var textureHolder = new render_28.J3DTextureHolder();
-            return scenes_9.createScenesFromBuffer(gl, textureHolder, decompressed).then(function (scenes) {
+            var textureHolder = new render_29.J3DTextureHolder();
+            return scenes_8.createScenesFromBuffer(gl, textureHolder, decompressed).then(function (scenes) {
                 util_48.assert(scenes.length === 1);
                 return scenes[0];
             });
@@ -18625,7 +18626,7 @@ System.register("luigis_mansion/scenes", ["Progressable", "compression/Yay0", "u
                 binBuffer = roomBinFile.buffer;
             }
             var bin = BIN.parse(binBuffer);
-            var binScene = new render_29.BinScene(gl, bin);
+            var binScene = new render_28.BinScene(gl, bin);
             binScene.name = path.split('/').pop();
             return binScene;
         });
@@ -18637,7 +18638,6 @@ System.register("luigis_mansion/scenes", ["Progressable", "compression/Yay0", "u
         else
             return s;
     }
-    var Progressable_9, Yay0, util_48, RARC, BIN, render_29, UI, scenes_9, render_28, LuigisMansionScene, LuigisMansionBinSceneDesc, map2RoomsPaths, id, name, sceneDescs, sceneGroup;
     return {
         setters: [
             function (Progressable_9_1) {
@@ -18655,17 +18655,17 @@ System.register("luigis_mansion/scenes", ["Progressable", "compression/Yay0", "u
             function (BIN_1) {
                 BIN = BIN_1;
             },
-            function (render_29_1) {
-                render_29 = render_29_1;
+            function (render_28_1) {
+                render_28 = render_28_1;
             },
             function (UI_5) {
                 UI = UI_5;
             },
-            function (scenes_9_1) {
-                scenes_9 = scenes_9_1;
+            function (scenes_8_1) {
+                scenes_8 = scenes_8_1;
             },
-            function (render_28_1) {
-                render_28 = render_28_1;
+            function (render_29_1) {
+                render_29 = render_29_1;
             }
         ],
         execute: function () {
@@ -18808,8 +18808,8 @@ System.register("luigis_mansion/scenes", ["Progressable", "compression/Yay0", "u
 });
 System.register("rres/render", ["rres/brres", "gx/gx_material", "gl-matrix", "gx/gx_render", "Camera", "j3d/render"], function (exports_78, context_78) {
     "use strict";
-    var __moduleName = context_78 && context_78.id;
     var BRRES, GX_Material, gl_matrix_17, gx_render_4, Camera_9, render_30, RRESTextureHolder, ModelRenderer, Command_Shape, matrixScratch, Command_Material;
+    var __moduleName = context_78 && context_78.id;
     return {
         setters: [
             function (BRRES_1) {
@@ -19002,17 +19002,18 @@ System.register("rres/render", ["rres/brres", "gx/gx_material", "gl-matrix", "gx
                     }
                 };
                 ModelRenderer.prototype.translateModel = function (gl) {
+                    var e_64, _a;
                     this.growMatrixArray(this.mdl0.sceneGraph.nodeTreeOps);
                     try {
-                        for (var _a = __values(this.mdl0.materials), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var material = _b.value;
+                        for (var _b = __values(this.mdl0.materials), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var material = _c.value;
                             this.materialCommands.push(new Command_Material(gl, this, this.textureHolder, material, this.materialHacks));
                         }
                     }
                     catch (e_64_1) { e_64 = { error: e_64_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_64) throw e_64.error; }
                     }
@@ -19021,7 +19022,6 @@ System.register("rres/render", ["rres/brres", "gx/gx_material", "gl-matrix", "gx
                         var shape = this.mdl0.shapes[i];
                         this.shapeCommands.push(new Command_Shape(gl, this.bufferCoalescer.coalescedBuffers[i], shape));
                     }
-                    var e_64, _c;
                 };
                 return ModelRenderer;
             }());
@@ -19212,6 +19212,7 @@ System.register("rres/render", ["rres/brres", "gx/gx_material", "gl-matrix", "gx
 // http://wiki.tockdom.com/wiki/BRRES
 System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "gl-matrix", "Camera"], function (exports_79, context_79) {
     "use strict";
+    var util_49, GX_Material, gx_displaylist_4, gl_matrix_18, Camera_10, DisplayListRegisters, AnimationController, Graph, SRT0TexMtxAnimator, TexMtxIndex, PAT0TexAnimator, AnimatableColor, CLR0ColorAnimator, CHR0NodesAnimator;
     var __moduleName = context_79 && context_79.id;
     //#region Utility
     function calc2dMtx(dst, src) {
@@ -20030,6 +20031,7 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
         return { nodeTreeOps: nodeTreeOps, drawOpaOps: drawOpaOps, drawXluOps: drawXluOps };
     }
     function parseMDL0(buffer) {
+        var e_65, _a, e_66, _b;
         var view = buffer.createDataView();
         util_49.assert(util_49.readString(buffer, 0x00, 0x04) === 'MDL0');
         var version = view.getUint32(0x08);
@@ -20120,7 +20122,6 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
         }
         var sceneGraph = parseMDL0_SceneGraph(buffer, byteCodeResDic);
         return { name: name, bbox: bbox, materials: materials, shapes: shapes, nodes: nodes, sceneGraph: sceneGraph };
-        var e_65, _a, e_66, _b;
     }
     function getAnimFrame(anim, frame) {
         // Be careful of floating point precision.
@@ -20336,6 +20337,7 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
         return { materialName: materialName, texAnimations: texAnimations };
     }
     function parseSRT0(buffer) {
+        var e_67, _a;
         var view = buffer.createDataView();
         util_49.assert(util_49.readString(buffer, 0x00, 0x04) === 'SRT0');
         var version = view.getUint32(0x08);
@@ -20371,7 +20373,6 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
         }
         util_49.assert(matAnimations.length === numMaterials);
         return { name: name, loopMode: loopMode, duration: duration, texMtxMode: texMtxMode, matAnimations: matAnimations };
-        var e_67, _a;
     }
     function bindSRT0Animator(animationController, srt0, materialName, texMtxIndex) {
         var texData = findAnimationData_SRT0(srt0, materialName, texMtxIndex);
@@ -20441,6 +20442,7 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
         return { materialName: materialName, texAnimations: texAnimations };
     }
     function parsePAT0(buffer) {
+        var e_68, _a;
         var view = buffer.createDataView();
         util_49.assert(util_49.readString(buffer, 0x00, 0x04) === 'PAT0');
         var version = view.getUint32(0x08);
@@ -20488,7 +20490,6 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
             texNameOffsetTableIdx += 0x04;
         }
         return { name: name, loopMode: loopMode, duration: duration, matAnimations: matAnimations, texNames: texNames };
-        var e_68, _a;
     }
     function findFrameData(frames, frame) {
         if (frames.length === 1)
@@ -20553,6 +20554,7 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
         return { materialName: materialName, clrAnimations: clrAnimations };
     }
     function parseCLR0(buffer) {
+        var e_69, _a;
         var view = buffer.createDataView();
         util_49.assert(util_49.readString(buffer, 0x00, 0x04) === 'CLR0');
         var version = view.getUint32(0x08);
@@ -20587,7 +20589,6 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
         }
         util_49.assert(matAnimations.length === numMaterials);
         return { name: name, loopMode: loopMode, duration: duration, matAnimations: matAnimations };
-        var e_69, _a;
     }
     function lerpColor(k0, k1, t) {
         var k0r = (k0 >>> 24) & 0xFF;
@@ -20705,6 +20706,7 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
         };
     }
     function parseCHR0(buffer) {
+        var e_70, _a;
         var view = buffer.createDataView();
         util_49.assert(util_49.readString(buffer, 0x00, 0x04) === 'CHR0');
         var version = view.getUint32(0x08);
@@ -20740,9 +20742,9 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
         }
         util_49.assert(nodeAnimations.length === numNodes);
         return { name: name, loopMode: loopMode, duration: duration, nodeAnimations: nodeAnimations };
-        var e_70, _a;
     }
     function bindCHR0Animator(animationController, chr0, nodes) {
+        var e_71, _a;
         var nodeData = [];
         var _loop_13 = function (nodeAnimation) {
             var node = nodes.find(function (node) { return node.name === nodeAnimation.nodeName; });
@@ -20751,15 +20753,15 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
             nodeData[node.id] = nodeAnimation;
         };
         try {
-            for (var _a = __values(chr0.nodeAnimations), _b = _a.next(); !_b.done; _b = _a.next()) {
-                var nodeAnimation = _b.value;
+            for (var _b = __values(chr0.nodeAnimations), _c = _b.next(); !_c.done; _c = _b.next()) {
+                var nodeAnimation = _c.value;
                 _loop_13(nodeAnimation);
             }
         }
         catch (e_71_1) { e_71 = { error: e_71_1 }; }
         finally {
             try {
-                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
             finally { if (e_71) throw e_71.error; }
         }
@@ -20767,10 +20769,10 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
         if (nodeData.length === 0)
             return null;
         return new CHR0NodesAnimator(animationController, chr0, nodeData);
-        var e_71, _c;
     }
     exports_79("bindCHR0Animator", bindCHR0Animator);
     function parse(buffer) {
+        var e_72, _a, e_73, _b, e_74, _c, e_75, _d, e_76, _e, e_77, _f;
         var view = buffer.createDataView();
         util_49.assert(util_49.readString(buffer, 0x00, 0x04) === 'bres');
         var littleEndian;
@@ -20918,10 +20920,8 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
             }
         }
         return { mdl0: mdl0, tex0: tex0, srt0: srt0, pat0: pat0, clr0: clr0, chr0: chr0 };
-        var e_72, _a, e_73, _b, e_74, _c, e_75, _d, e_76, _e, e_77, _f;
     }
     exports_79("parse", parse);
-    var util_49, GX_Material, gx_displaylist_4, gl_matrix_18, Camera_10, DisplayListRegisters, AnimationController, Graph, SRT0TexMtxAnimator, TexMtxIndex, PAT0TexAnimator, AnimatableColor, CLR0ColorAnimator, CHR0NodesAnimator;
     return {
         setters: [
             function (util_49_1) {
@@ -21217,6 +21217,7 @@ System.register("rres/brres", ["util", "gx/gx_material", "gx/gx_displaylist", "g
 // http://wiibrew.org/wiki/U8_archive
 System.register("rres/u8", ["util"], function (exports_80, context_80) {
     "use strict";
+    var util_50, U8Archive;
     var __moduleName = context_80 && context_80.id;
     function parse(buffer) {
         var view = buffer.createDataView();
@@ -21279,7 +21280,6 @@ System.register("rres/u8", ["util"], function (exports_80, context_80) {
         return archive;
     }
     exports_80("parse", parse);
-    var util_50, U8Archive;
     return {
         setters: [
             function (util_50_1) {
@@ -21291,6 +21291,7 @@ System.register("rres/u8", ["util"], function (exports_80, context_80) {
                 function U8Archive() {
                 }
                 U8Archive.prototype.findDirParts = function (parts) {
+                    var e_78, _a;
                     var dir = this.root;
                     var _loop_14 = function (part) {
                         dir = dir.subdirs.find(function (subdir) { return subdir.name === part; });
@@ -21313,7 +21314,6 @@ System.register("rres/u8", ["util"], function (exports_80, context_80) {
                         finally { if (e_78) throw e_78.error; }
                     }
                     return dir;
-                    var e_78, _a;
                 };
                 U8Archive.prototype.findDir = function (path) {
                     return this.findDirParts(path.split('/'));
@@ -21338,8 +21338,8 @@ System.register("rres/u8", ["util"], function (exports_80, context_80) {
 // Skyward Sword
 System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/u8", "util", "Progressable", "render", "rres/render", "gx/gx_material", "gl-matrix", "j3d/render"], function (exports_81, context_81) {
     "use strict";
-    var __moduleName = context_81 && context_81.id;
     var UI, CX, BRRES, U8, util_51, Progressable_10, render_31, render_32, gx_material_4, gl_matrix_19, render_33, SAND_CLOCK_ICON, materialHacks, ModelArchiveCollection, SkywardSwordScene, SkywardSwordSceneDesc, id, name, sceneDescs, sceneGroup;
+    var __moduleName = context_81 && context_81.id;
     return {
         setters: [
             function (UI_6) {
@@ -21391,9 +21391,10 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
                     this.search.push(archive);
                 };
                 ModelArchiveCollection.prototype.findFile = function (path) {
+                    var e_79, _a;
                     try {
-                        for (var _a = __values(this.search), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var archive = _b.value;
+                        for (var _b = __values(this.search), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var archive = _c.value;
                             var file = archive.findFile(path);
                             if (file)
                                 return file;
@@ -21402,12 +21403,11 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
                     catch (e_79_1) { e_79 = { error: e_79_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_79) throw e_79.error; }
                     }
                     return null;
-                    var e_79, _c;
                 };
                 ModelArchiveCollection.prototype.loadRRESFromArc = function (gl, textureHolder, path) {
                     if (this.loaded.has(path))
@@ -21423,6 +21423,7 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
             }());
             SkywardSwordScene = /** @class */ (function () {
                 function SkywardSwordScene(gl, stageId, systemArchive, objPackArchive, stageArchive) {
+                    var e_80, _a, e_81, _b, e_82, _c, e_83, _d, e_84, _e;
                     this.stageId = stageId;
                     this.systemArchive = systemArchive;
                     this.objPackArchive = objPackArchive;
@@ -21458,23 +21459,23 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
                     var roomArchivesDir = stageArchive.findDir('rarc');
                     if (roomArchivesDir) {
                         try {
-                            for (var _a = __values(roomArchivesDir.files), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                var roomArchiveFile = _b.value;
+                            for (var _f = __values(roomArchivesDir.files), _g = _f.next(); !_g.done; _g = _f.next()) {
+                                var roomArchiveFile = _g.value;
                                 var roomArchive = U8.parse(roomArchiveFile.buffer);
                                 var roomRRES = BRRES.parse(roomArchive.findFile('g3d/room.brres').buffer);
                                 this.textureHolder.addRRESTextures(gl, roomRRES);
                                 try {
-                                    for (var _c = __values(roomRRES.mdl0), _d = _c.next(); !_d.done; _d = _c.next()) {
-                                        var mdl0 = _d.value;
+                                    for (var _h = __values(roomRRES.mdl0), _j = _h.next(); !_j.done; _j = _h.next()) {
+                                        var mdl0 = _j.value;
                                         this.spawnModel(gl, mdl0, roomRRES, roomArchiveFile.name);
                                     }
                                 }
-                                catch (e_80_1) { e_80 = { error: e_80_1 }; }
+                                catch (e_81_1) { e_81 = { error: e_81_1 }; }
                                 finally {
                                     try {
-                                        if (_d && !_d.done && (_e = _c.return)) _e.call(_c);
+                                        if (_j && !_j.done && (_b = _h.return)) _b.call(_h);
                                     }
-                                    finally { if (e_80) throw e_80.error; }
+                                    finally { if (e_81) throw e_81.error; }
                                 }
                                 var roomBZS = this.parseBZS(roomArchive.findFile('dat/room.bzs').buffer);
                                 this.roomBZSes.push(roomBZS);
@@ -21482,59 +21483,59 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
                                 this.spawnLayout(gl, layout);
                             }
                         }
-                        catch (e_81_1) { e_81 = { error: e_81_1 }; }
+                        catch (e_80_1) { e_80 = { error: e_80_1 }; }
                         finally {
                             try {
-                                if (_b && !_b.done && (_f = _a.return)) _f.call(_a);
+                                if (_g && !_g.done && (_a = _f.return)) _a.call(_f);
                             }
-                            finally { if (e_81) throw e_81.error; }
+                            finally { if (e_80) throw e_80.error; }
                         }
                     }
                     try {
                         outer: 
                         // Find any indirect scenes.
-                        for (var _g = __values(this.models), _h = _g.next(); !_h.done; _h = _g.next()) {
-                            var modelRenderer = _h.value;
+                        for (var _k = __values(this.models), _l = _k.next(); !_l.done; _l = _k.next()) {
+                            var modelRenderer = _l.value;
                             try {
-                                for (var _j = __values(modelRenderer.mdl0.materials), _k = _j.next(); !_k.done; _k = _j.next()) {
-                                    var material = _k.value;
+                                for (var _m = __values(modelRenderer.mdl0.materials), _o = _m.next(); !_o.done; _o = _m.next()) {
+                                    var material = _o.value;
                                     try {
-                                        for (var _l = __values(material.samplers), _m = _l.next(); !_m.done; _m = _l.next()) {
-                                            var sampler = _m.value;
+                                        for (var _p = __values(material.samplers), _q = _p.next(); !_q.done; _q = _p.next()) {
+                                            var sampler = _q.value;
                                             if (sampler.name === 'DummyWater') {
                                                 this.indirectModels.push(modelRenderer);
                                                 continue outer;
                                             }
                                         }
                                     }
-                                    catch (e_82_1) { e_82 = { error: e_82_1 }; }
+                                    catch (e_84_1) { e_84 = { error: e_84_1 }; }
                                     finally {
                                         try {
-                                            if (_m && !_m.done && (_o = _l.return)) _o.call(_l);
+                                            if (_q && !_q.done && (_e = _p.return)) _e.call(_p);
                                         }
-                                        finally { if (e_82) throw e_82.error; }
+                                        finally { if (e_84) throw e_84.error; }
                                     }
                                 }
                             }
                             catch (e_83_1) { e_83 = { error: e_83_1 }; }
                             finally {
                                 try {
-                                    if (_k && !_k.done && (_p = _j.return)) _p.call(_j);
+                                    if (_o && !_o.done && (_d = _m.return)) _d.call(_m);
                                 }
                                 finally { if (e_83) throw e_83.error; }
                             }
                         }
                     }
-                    catch (e_84_1) { e_84 = { error: e_84_1 }; }
+                    catch (e_82_1) { e_82 = { error: e_82_1 }; }
                     finally {
                         try {
-                            if (_h && !_h.done && (_q = _g.return)) _q.call(_g);
+                            if (_l && !_l.done && (_c = _k.return)) _c.call(_k);
                         }
-                        finally { if (e_84) throw e_84.error; }
+                        finally { if (e_82) throw e_82.error; }
                     }
-                    var e_81, _f, e_80, _e, e_84, _q, e_83, _p, e_82, _o;
                 }
                 SkywardSwordScene.prototype.createPanels = function () {
+                    var e_85, _a;
                     var panels = [];
                     var layersPanel = new UI.LayerPanel();
                     layersPanel.setLayers(this.models);
@@ -21543,8 +21544,8 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
                     var futureModels = [];
                     var pastModels = [];
                     try {
-                        for (var _a = __values(this.models), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var modelRenderer = _b.value;
+                        for (var _b = __values(this.models), _c = _b.next(); !_c.done; _c = _b.next()) {
+                            var modelRenderer = _c.value;
                             if (modelRenderer.mdl0.name.startsWith('model_obj'))
                                 futureModels.push(modelRenderer);
                             // Lanayru Sand Sea has a "past" decal on top of a future zone.
@@ -21555,7 +21556,7 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
                     catch (e_85_1) { e_85 = { error: e_85_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                         }
                         finally { if (e_85) throw e_85.error; }
                     }
@@ -21565,6 +21566,7 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
                         var selector = new UI.SimpleSingleSelect();
                         selector.setStrings(['Past', 'Future']);
                         selector.onselectionchange = function (index) {
+                            var e_86, _a, e_87, _b;
                             var isFuture = (index === 1);
                             try {
                                 for (var futureModels_1 = __values(futureModels), futureModels_1_1 = futureModels_1.next(); !futureModels_1_1.done; futureModels_1_1 = futureModels_1.next()) {
@@ -21593,14 +21595,12 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
                                 finally { if (e_87) throw e_87.error; }
                             }
                             layersPanel.syncLayerVisibility();
-                            var e_86, _a, e_87, _b;
                         };
                         selector.selectItem(0); // Past
                         futurePanel.contents.appendChild(selector.elem);
                         panels.push(futurePanel);
                     }
                     return panels;
-                    var e_85, _c;
                 };
                 SkywardSwordScene.prototype.destroy = function (gl) {
                     this.textureHolder.destroy(gl);
@@ -21639,38 +21639,38 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
                     });
                 };
                 SkywardSwordScene.prototype.spawnModel = function (gl, mdl0, rres, namePrefix) {
+                    var e_88, _a, e_89, _b;
                     var modelRenderer = new render_32.ModelRenderer(gl, this.textureHolder, mdl0, namePrefix, materialHacks);
                     this.models.push(modelRenderer);
                     try {
                         // Bind animations.
-                        for (var _a = __values(rres.srt0), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var srt0 = _b.value;
+                        for (var _c = __values(rres.srt0), _d = _c.next(); !_d.done; _d = _c.next()) {
+                            var srt0 = _d.value;
                             modelRenderer.bindSRT0(this.animationController, srt0);
                         }
                     }
                     catch (e_88_1) { e_88 = { error: e_88_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                            if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
                         }
                         finally { if (e_88) throw e_88.error; }
                     }
                     try {
                         // Water animations are in the common archive.
-                        for (var _d = __values(this.commonRRES.srt0), _e = _d.next(); !_e.done; _e = _d.next()) {
-                            var srt0 = _e.value;
+                        for (var _e = __values(this.commonRRES.srt0), _f = _e.next(); !_f.done; _f = _e.next()) {
+                            var srt0 = _f.value;
                             modelRenderer.bindSRT0(this.animationController, srt0);
                         }
                     }
                     catch (e_89_1) { e_89 = { error: e_89_1 }; }
                     finally {
                         try {
-                            if (_e && !_e.done && (_f = _d.return)) _f.call(_d);
+                            if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
                         }
                         finally { if (e_89) throw e_89.error; }
                     }
                     return modelRenderer;
-                    var e_88, _c, e_89, _f;
                 };
                 SkywardSwordScene.prototype.spawnModelName = function (gl, rres, modelName, namePrefix) {
                     var mdl0 = rres.mdl0.find(function (model) { return model.name === modelName; });
@@ -21798,10 +21798,11 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
                     return models;
                 };
                 SkywardSwordScene.prototype.spawnLayout = function (gl, layout) {
+                    var e_90, _a, e_91, _b, e_92, _c, e_93, _d;
                     var q = gl_matrix_19.quat.create();
                     try {
-                        for (var _a = __values(layout.obj), _b = _a.next(); !_b.done; _b = _a.next()) {
-                            var obj = _b.value;
+                        for (var _e = __values(layout.obj), _f = _e.next(); !_f.done; _f = _e.next()) {
+                            var obj = _f.value;
                             var models = this.spawnObj(gl, obj.name, obj.unk1, obj.unk2);
                             // Set model matrix.
                             var rotationX = 180 * (obj.rotX / 0x7FFF);
@@ -21813,26 +21814,26 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
                                     gl_matrix_19.mat4.fromRotationTranslation(modelRenderer.modelMatrix, q, [obj.tx, obj.ty, obj.tz]);
                                 }
                             }
-                            catch (e_90_1) { e_90 = { error: e_90_1 }; }
+                            catch (e_91_1) { e_91 = { error: e_91_1 }; }
                             finally {
                                 try {
-                                    if (models_1_1 && !models_1_1.done && (_c = models_1.return)) _c.call(models_1);
+                                    if (models_1_1 && !models_1_1.done && (_b = models_1.return)) _b.call(models_1);
                                 }
-                                finally { if (e_90) throw e_90.error; }
+                                finally { if (e_91) throw e_91.error; }
                             }
                         }
                     }
-                    catch (e_91_1) { e_91 = { error: e_91_1 }; }
+                    catch (e_90_1) { e_90 = { error: e_90_1 }; }
                     finally {
                         try {
-                            if (_b && !_b.done && (_d = _a.return)) _d.call(_a);
+                            if (_f && !_f.done && (_a = _e.return)) _a.call(_e);
                         }
-                        finally { if (e_91) throw e_91.error; }
+                        finally { if (e_90) throw e_90.error; }
                     }
                     try {
                         // Now do scalable objects...
-                        for (var _e = __values(layout.sobj), _f = _e.next(); !_f.done; _f = _e.next()) {
-                            var obj = _f.value;
+                        for (var _g = __values(layout.sobj), _h = _g.next(); !_h.done; _h = _g.next()) {
+                            var obj = _h.value;
                             var models = this.spawnObj(gl, obj.name, obj.unk1, obj.unk2);
                             // Set model matrix.
                             var rotation = 180 * (obj.rotY / 0x7FFF);
@@ -21843,23 +21844,22 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
                                     gl_matrix_19.mat4.fromRotationTranslationScale(modelRenderer.modelMatrix, q, [obj.tx, obj.ty, obj.tz], [obj.sx, obj.sy, obj.sz]);
                                 }
                             }
-                            catch (e_92_1) { e_92 = { error: e_92_1 }; }
+                            catch (e_93_1) { e_93 = { error: e_93_1 }; }
                             finally {
                                 try {
-                                    if (models_2_1 && !models_2_1.done && (_g = models_2.return)) _g.call(models_2);
+                                    if (models_2_1 && !models_2_1.done && (_d = models_2.return)) _d.call(models_2);
                                 }
-                                finally { if (e_92) throw e_92.error; }
+                                finally { if (e_93) throw e_93.error; }
                             }
                         }
                     }
-                    catch (e_93_1) { e_93 = { error: e_93_1 }; }
+                    catch (e_92_1) { e_92 = { error: e_92_1 }; }
                     finally {
                         try {
-                            if (_f && !_f.done && (_h = _e.return)) _h.call(_e);
+                            if (_h && !_h.done && (_c = _g.return)) _c.call(_g);
                         }
-                        finally { if (e_93) throw e_93.error; }
+                        finally { if (e_92) throw e_92.error; }
                     }
-                    var e_91, _d, e_90, _c, e_93, _h, e_92, _g;
                 };
                 SkywardSwordScene.prototype.parseBZS = function (buffer) {
                     var view = buffer.createDataView();
@@ -22026,6 +22026,7 @@ System.register("rres/zss_scenes", ["ui", "compression/CX", "rres/brres", "rres/
 // Elebits
 System.register("rres/elb_scenes", ["ui", "rres/brres", "util", "Progressable", "rres/render"], function (exports_82, context_82) {
     "use strict";
+    var UI, BRRES, util_52, Progressable_11, render_34, materialHacks, BasicRRESScene, ElebitsSceneDesc, id, name, sceneDescs, sceneGroup;
     var __moduleName = context_82 && context_82.id;
     function makeElbPath(stg, room) {
         var z = util_52.leftPad('' + room, 2);
@@ -22044,7 +22045,6 @@ System.register("rres/elb_scenes", ["ui", "rres/brres", "util", "Progressable", 
             L.push(i);
         return L;
     }
-    var UI, BRRES, util_52, Progressable_11, render_34, materialHacks, BasicRRESScene, ElebitsSceneDesc, id, name, sceneDescs, sceneGroup;
     return {
         setters: [
             function (UI_7) {
@@ -22070,6 +22070,7 @@ System.register("rres/elb_scenes", ["ui", "rres/brres", "util", "Progressable", 
             };
             BasicRRESScene = /** @class */ (function () {
                 function BasicRRESScene(gl, stageRRESes) {
+                    var e_94, _a, e_95, _b;
                     this.stageRRESes = stageRRESes;
                     this.models = [];
                     this.textureHolder = new render_34.RRESTextureHolder();
@@ -22083,28 +22084,27 @@ System.register("rres/elb_scenes", ["ui", "rres/brres", "util", "Progressable", 
                             var modelRenderer = new render_34.ModelRenderer(gl, this.textureHolder, stageRRES.mdl0[0], '', materialHacks);
                             this.models.push(modelRenderer);
                             try {
-                                for (var _a = __values(stageRRES.srt0), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                    var srt0 = _b.value;
+                                for (var _c = __values(stageRRES.srt0), _d = _c.next(); !_d.done; _d = _c.next()) {
+                                    var srt0 = _d.value;
                                     modelRenderer.bindSRT0(this.animationController, srt0);
                                 }
                             }
-                            catch (e_94_1) { e_94 = { error: e_94_1 }; }
+                            catch (e_95_1) { e_95 = { error: e_95_1 }; }
                             finally {
                                 try {
-                                    if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                    if (_d && !_d.done && (_b = _c.return)) _b.call(_c);
                                 }
-                                finally { if (e_94) throw e_94.error; }
+                                finally { if (e_95) throw e_95.error; }
                             }
                         }
                     }
-                    catch (e_95_1) { e_95 = { error: e_95_1 }; }
+                    catch (e_94_1) { e_94 = { error: e_94_1 }; }
                     finally {
                         try {
-                            if (stageRRESes_1_1 && !stageRRESes_1_1.done && (_d = stageRRESes_1.return)) _d.call(stageRRESes_1);
+                            if (stageRRESes_1_1 && !stageRRESes_1_1.done && (_a = stageRRESes_1.return)) _a.call(stageRRESes_1);
                         }
-                        finally { if (e_95) throw e_95.error; }
+                        finally { if (e_94) throw e_94.error; }
                     }
-                    var e_95, _d, e_94, _c;
                 }
                 BasicRRESScene.prototype.createPanels = function () {
                     var panels = [];
@@ -22163,8 +22163,8 @@ System.register("rres/elb_scenes", ["ui", "rres/brres", "util", "Progressable", 
 // Mario Kart Wii
 System.register("rres/mkwii_scenes", ["rres/brres", "rres/u8", "compression/Yaz0", "util", "gl-matrix", "rres/render", "render"], function (exports_83, context_83) {
     "use strict";
-    var __moduleName = context_83 && context_83.id;
     var BRRES, U8, Yaz0, util_53, gl_matrix_20, render_35, render_36, MarioKartRenderer, MarioKartWiiSceneDesc, id, name, sceneDescs, sceneGroup;
+    var __moduleName = context_83 && context_83.id;
     return {
         setters: [
             function (BRRES_4) {
@@ -22295,8 +22295,8 @@ System.register("rres/mkwii_scenes", ["rres/brres", "rres/u8", "compression/Yaz0
 });
 System.register("main", ["viewer", "ArrayBufferSlice", "Progressable", "j3d/ztp_scenes", "j3d/mkdd_scenes", "j3d/zww_scenes", "j3d/sms_scenes", "j3d/smg_scenes", "sm64ds/scenes", "mdl0/scenes", "zelview/scenes", "oot3d/scenes", "fres/scenes", "fres/splatoon_scenes", "dksiv/scenes", "metroid_prime/scenes", "luigis_mansion/scenes", "rres/zss_scenes", "rres/elb_scenes", "rres/mkwii_scenes", "j3d/scenes", "ui", "Camera"], function (exports_84, context_84) {
     "use strict";
-    var __moduleName = context_84 && context_84.id;
     var viewer_1, ArrayBufferSlice_10, Progressable_12, ZTP, MKDD, ZWW, SMS, SMG, SM64DS, MDL0, ZELVIEW, OOT3D, FRES, SPL, DKSIV, MP1, LM, ZSS, ELB, MKWII, J3D, ui_1, Camera_11, sceneGroups, DroppedFileSceneDesc, SceneLoader, Main;
+    var __moduleName = context_84 && context_84.id;
     return {
         setters: [
             function (viewer_1_1) {
@@ -22634,8 +22634,8 @@ System.register("main", ["viewer", "ArrayBufferSlice", "Progressable", "j3d/ztp_
 });
 System.register("embeds/main", ["viewer", "Camera"], function (exports_85, context_85) {
     "use strict";
-    var __moduleName = context_85 && context_85.id;
     var Viewer, Camera_12, FsButton, Main;
+    var __moduleName = context_85 && context_85.id;
     return {
         setters: [
             function (Viewer_1) {
@@ -22727,6 +22727,7 @@ System.register("embeds/main", ["viewer", "Camera"], function (exports_85, conte
 });
 System.register("embeds/sunshine_water", ["gl-matrix", "util", "gx/gx_material", "j3d/j3d", "j3d/rarc", "j3d/render", "j3d/sms_scenes", "compression/Yaz0", "gx/gx_render"], function (exports_86, context_86) {
     "use strict";
+    var gl_matrix_21, util_54, GX_Material, j3d_6, RARC, render_37, sms_scenes_1, Yaz0, gx_render_5, scale, posMtx, SeaPlaneScene, PlaneShape;
     var __moduleName = context_86 && context_86.id;
     function createScene(gl, name) {
         return util_54.fetch("data/j3d/sms/dolpic0.szs").then(function (buffer) {
@@ -22747,7 +22748,6 @@ System.register("embeds/sunshine_water", ["gl-matrix", "util", "gx/gx_material",
         });
     }
     exports_86("createScene", createScene);
-    var gl_matrix_21, util_54, GX_Material, j3d_6, RARC, render_37, sms_scenes_1, Yaz0, gx_render_5, scale, posMtx, SeaPlaneScene, PlaneShape;
     return {
         setters: [
             function (gl_matrix_21_1) {
@@ -22804,6 +22804,7 @@ System.register("embeds/sunshine_water", ["gl-matrix", "util", "gx/gx_material",
                     this.renderHelper = new gx_render_5.GXRenderHelper(gl);
                 }
                 SeaPlaneScene.prototype.makeMaterialCommand = function (gl, material, configName) {
+                    var e_96, _a;
                     var gxMaterial = material.gxMaterial;
                     if (configName.includes('noalpha')) {
                         // Disable alpha test
@@ -22840,8 +22841,8 @@ System.register("embeds/sunshine_water", ["gl-matrix", "util", "gx/gx_material",
                     var cmd = new render_37.Command_Material(gl, this, material);
                     if (configName.includes('nomip')) {
                         try {
-                            for (var _a = __values(this.glSamplers), _b = _a.next(); !_b.done; _b = _a.next()) {
-                                var sampler = _b.value;
+                            for (var _b = __values(this.glSamplers), _c = _b.next(); !_c.done; _c = _b.next()) {
+                                var sampler = _c.value;
                                 gl.samplerParameterf(sampler, gl.TEXTURE_MIN_LOD, 1);
                                 gl.samplerParameterf(sampler, gl.TEXTURE_MAX_LOD, 1);
                             }
@@ -22849,13 +22850,12 @@ System.register("embeds/sunshine_water", ["gl-matrix", "util", "gx/gx_material",
                         catch (e_96_1) { e_96 = { error: e_96_1 }; }
                         finally {
                             try {
-                                if (_b && !_b.done && (_c = _a.return)) _c.call(_a);
+                                if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
                             }
                             finally { if (e_96) throw e_96.error; }
                         }
                     }
                     return cmd;
-                    var e_96, _c;
                 };
                 SeaPlaneScene.prototype.render = function (state) {
                     var gl = state.gl;
@@ -22945,6 +22945,7 @@ System.register("embeds/sunshine_water", ["gl-matrix", "util", "gx/gx_material",
 });
 System.register("luigis_mansion/jmp", ["util"], function (exports_87, context_87) {
     "use strict";
+    var util_55, nameTable, hashLookup;
     var __moduleName = context_87 && context_87.id;
     function nameHash(str) {
         var hash = 0;
@@ -22966,6 +22967,7 @@ System.register("luigis_mansion/jmp", ["util"], function (exports_87, context_87
             return "Unk$" + hash;
     }
     function parse(buffer) {
+        var e_97, _a;
         var view = buffer.createDataView();
         var recordCount = view.getUint32(0x00, false);
         var fieldCount = view.getUint32(0x04, false);
@@ -23017,10 +23019,8 @@ System.register("luigis_mansion/jmp", ["util"], function (exports_87, context_87
             recordTableIdx += recordSize;
         }
         return records;
-        var e_97, _a;
     }
     exports_87("parse", parse);
-    var util_55, nameTable, hashLookup;
     return {
         setters: [
             function (util_55_1) {
