@@ -267,7 +267,6 @@ function tri(idxData: Uint8Array, offs: number, cmd: number) {
 function flushTexture(state: State) {
     for (let i = 0; i < state.textureTiles.length; i++)
     {
-        console.log(`loading texture tile ${i} of ${state.textureTiles.length}`)
         if (state.textureTiles[i] && state.textureTiles[i].addr != 0)
             loadTile(state, state.textureTiles[i]);
     }
