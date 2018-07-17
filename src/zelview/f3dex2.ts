@@ -265,10 +265,12 @@ function tri(idxData: Uint8Array, offs: number, cmd: number) {
 }
 
 function flushTexture(state: State) {
-    if (state.textureTiles[0] && state.textureTiles[0].addr != 0)
-        loadTile(state, state.textureTiles[0]);
-    if (state.textureTiles[1] && state.textureTiles[0].addr != 0)
-        loadTile(state, state.textureTiles[1])
+    for (let i = 0; i < state.textureTiles.length; i++)
+    {
+        console.log(`loading texture tile ${i} of ${state.textureTiles.length}`)
+        if (state.textureTiles[i] && state.textureTiles[i].addr != 0)
+            loadTile(state, state.textureTiles[i]);
+    }
 }
 
 function cmd_TRI1(state: State, w0: number, w1: number) {

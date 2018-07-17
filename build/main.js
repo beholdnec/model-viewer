@@ -12367,10 +12367,11 @@ System.register("zelview/f3dex2", ["gl-matrix", "zelview/render", "render"], fun
         idxData[offs + 2] = (cmd >> 1) & 0x7F;
     }
     function flushTexture(state) {
-        if (state.textureTiles[0] && state.textureTiles[0].addr != 0)
-            loadTile(state, state.textureTiles[0]);
-        if (state.textureTiles[1] && state.textureTiles[0].addr != 0)
-            loadTile(state, state.textureTiles[1]);
+        for (var i = 0; i < state.textureTiles.length; i++) {
+            console.log("loading texture tile " + i + " of " + state.textureTiles.length);
+            if (state.textureTiles[i] && state.textureTiles[i].addr != 0)
+                loadTile(state, state.textureTiles[i]);
+        }
     }
     function cmd_TRI1(state, w0, w1) {
         flushTexture(state);
