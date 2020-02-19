@@ -173,8 +173,12 @@ export class BlockRenderer implements BlockRendererBase {
                 listSize: 0x1c,
                 numListBits: 8,
                 numLayersOffset: 0x41,
-                bitstreamOffset: 0x78,
+                bitstreamOffset: 0x78, // mode 0
                 bitstreamByteCount: 0x84,
+                // bitstreamOffset: 0x7c, // mode 1
+                // bitstreamByteCount: 0x86,
+                // bitstreamOffset: 0x80, // mode 2
+                // bitstreamByteCount: 0x88,
                 oldVat: false,
                 hasYTranslate: true,
                 oldShaders: false,
