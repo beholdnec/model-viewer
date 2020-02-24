@@ -35,20 +35,14 @@ export class BlockCollection implements IBlockCollection {
         const dataFetcher = context.dataFetcher;
         const pathBase = gameInfo.pathBase;
         this.blockFetcher = await gameInfo.makeBlockFetcher(this.mod, dataFetcher, gameInfo);
-        // const tex0Tab = await dataFetcher.fetchData(`${pathBase}/${subdir}/TEX0.tab`);
-        // const tex0Bin = await dataFetcher.fetchData(`${pathBase}/${subdir}/TEX0.bin`);
         if (this.isAncient) {
-            // const texTab = await dataFetcher.fetchData(`${pathBase}/TEX.tab`);
-            // const texBin = await dataFetcher.fetchData(`${pathBase}/TEX.bin`);
-            // this.texColl = new SFATextureCollection(texTab, texBin, this.isAncient);
-            console.log(`creating ancient texture collection`);
             this.texColl = new FalseTextureCollection(device);
         } else {
             const subdir = getSubdir(this.mod, gameInfo);
             try {
                 const tex1Tab = await dataFetcher.fetchData(`${pathBase}/${subdir}/TEX1.tab`);
                 const tex1Bin = await dataFetcher.fetchData(`${pathBase}/${subdir}/TEX1.bin`);
-                this.texColl = new SFATextureCollection(tex1Tab, tex1Bin, this.isAncient);
+                this.texColl = new SFATextureCollection(tex1Tab, tex1Bin);
             } catch (e) {
                 console.warn(`Failed to load textures for subdirectory ${subdir}. Using fake textures instead. Exception:`);
                 console.error(e);

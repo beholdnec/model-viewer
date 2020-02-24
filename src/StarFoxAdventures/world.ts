@@ -5,7 +5,6 @@ import { SceneContext } from '../SceneBase';
 import { SFA_GAME_INFO, GameInfo } from './scenes';
 import { loadRes } from './resource';
 import { ObjectManager } from './objects';
-import { MaterialInstance } from '../Common/JSYSTEM/J3D/J3DGraphBase';
 
 export class SFAWorldDesc implements Viewer.SceneDesc {
     constructor(public id: string, public name: string, private gameInfo: GameInfo = SFA_GAME_INFO, private isEarly: boolean = false, private isAncient: boolean = false) {

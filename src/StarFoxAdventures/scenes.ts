@@ -414,15 +414,11 @@ class SFABlockExhibitDesc implements Viewer.SceneDesc {
         console.log(`Creating block exhibit for ${directory}/${this.fileName} ...`);
 
         if (this.useAncientTextures) {
-            // TODO: get rid of this
-            // const texTab = await dataFetcher.fetchData(`${directory}/TEX.tab`);
-            // const texBin = await dataFetcher.fetchData(`${directory}/TEX.bin`);
-            // this.texColl = new SFATextureCollection(texTab, texBin, true);
             this.texColl = new FalseTextureCollection(device);
         } else {
             const tex1Tab = await dataFetcher.fetchData(`${directory}/TEX1.tab`);
             const tex1Bin = await dataFetcher.fetchData(`${directory}/TEX1.bin`);
-            this.texColl = new SFATextureCollection(tex1Tab, tex1Bin, false);
+            this.texColl = new SFATextureCollection(tex1Tab, tex1Bin);
         }
         const blockFetcher = new BlockExhibitFetcher(this.useCompression);
         await blockFetcher.create(dataFetcher, directory, `${this.fileName}.tab`, `${this.fileName}${this.useCompression ? '.zlb' : ''}.bin`);
