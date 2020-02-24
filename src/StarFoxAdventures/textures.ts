@@ -33,8 +33,8 @@ function loadTex(texData: ArrayBufferSlice, offset: number): LoadedTexture {
             width: dv.getUint16(0x0A),
             height: dv.getUint16(0x0C),
             format: dv.getUint8(0x16),
+            mipCount: dv.getUint16(0x1c) + 1,
             data: texData.slice(0x60),
-            mipCount: 1,
         },
         wrapS: dv.getUint8(0x17),
         wrapT: dv.getUint8(0x18),
@@ -71,7 +71,7 @@ function loadAncientTex(texData: ArrayBufferSlice, offset: number): LoadedTextur
 function decodeTex(device: GfxDevice, loaded: LoadedTexture, isAncient: boolean): DecodedTexture {
     let gfxTexture;
     if (!isAncient) {
-        const mipChain = GX_Texture.calcMipChain(loaded.texture, 1);
+        const mipChain = GX_Texture.calcMipChain(loaded.texture, loaded.texture.mipCount);
         gfxTexture = loadTextureFromMipChain(device, mipChain).gfxTexture;
     } else {
         // FIXME: "Ancient" textures are actually copied from Diddy Kong Racing and are useless for viewing
@@ -80,8 +80,6 @@ function decodeTex(device: GfxDevice, loaded: LoadedTexture, isAncient: boolean)
         
         const dv = loaded.texture.data!.createDataView();
         const pixels = new Uint8Array(loaded.texture.width * loaded.texture.height * 4);
-        let src = 0;
-        let dst = 0;
         switch (loaded.texture.format) {
         case 0x00: // 32-bit RGBA? Size is 4 * width * height, not including header. might be mipmapped.
             decodeTex_RGBA32(pixels, dv, 0, loaded.texture.width, loaded.texture.height, 0);
@@ -116,12 +114,13 @@ function decodeTex(device: GfxDevice, loaded: LoadedTexture, isAncient: boolean)
     }
     
     // GL texture is bound by loadTextureFromMipChain.
+    const [minFilter, mipFilter] = translateTexFilterGfx(loaded.minFilt);
     const gfxSampler = device.createSampler({
         wrapS: translateWrapModeGfx(loaded.wrapS),
         wrapT: translateWrapModeGfx(loaded.wrapT),
-        minFilter: translateTexFilterGfx(loaded.minFilt)[0], // TODO: implement mip filters
+        minFilter: minFilter, // TODO: implement mip filters
         magFilter: translateTexFilterGfx(loaded.magFilt)[0],
-        mipFilter: GfxMipFilterMode.NO_MIP,
+        mipFilter: mipFilter,
         minLOD: 0,
         maxLOD: 100,
     });

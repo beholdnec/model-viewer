@@ -7,12 +7,12 @@ import { loadRes } from './resource';
 import { ObjectManager } from './objects';
 import { MaterialInstance } from '../Common/JSYSTEM/J3D/J3DGraphBase';
 
-export class SFASceneDesc implements Viewer.SceneDesc {
+export class SFAWorldDesc implements Viewer.SceneDesc {
     constructor(public id: string, public name: string, private gameInfo: GameInfo = SFA_GAME_INFO, private isEarly: boolean = false, private isAncient: boolean = false) {
     }
 
     public async createScene(device: GfxDevice, context: SceneContext): Promise<Viewer.SceneGfx> {
-        console.log(`Creating scene for ${this.name} (ID ${this.id}) ...`);
+        console.log(`Creating scene for world ${this.name} (ID ${this.id}) ...`);
 
         const pathBase = this.gameInfo.pathBase;
         const dataFetcher = context.dataFetcher;
