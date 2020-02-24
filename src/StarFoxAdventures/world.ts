@@ -16,8 +16,10 @@ export class SFAWorldDesc implements Viewer.SceneDesc {
         const pathBase = this.gameInfo.pathBase;
         const dataFetcher = context.dataFetcher;
         const objectMan = new ObjectManager(this.gameInfo);
-        await objectMan.create(dataFetcher);
-        const romlistFile = await dataFetcher.fetchData(`${pathBase}/${this.id}.romlist.zlb`);
+        const [_, romlistFile] = await Promise.all([
+            objectMan.create(dataFetcher),
+            dataFetcher.fetchData(`${pathBase}/${this.id}.romlist.zlb`),
+        ]);
         const romlist = loadRes(romlistFile).createDataView();
 
         let offs = 0;

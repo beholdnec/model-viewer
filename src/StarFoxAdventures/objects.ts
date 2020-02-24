@@ -32,9 +32,14 @@ export class ObjectManager {
 
     public async create(dataFetcher: DataFetcher) {
         const pathBase = this.gameInfo.pathBase;
-        this.objectsTab = (await dataFetcher.fetchData(`${pathBase}/OBJECTS.tab`)).createDataView();
-        this.objectsBin = (await dataFetcher.fetchData(`${pathBase}/OBJECTS.bin`)).createDataView();
-        this.objindexBin = (await dataFetcher.fetchData(`${pathBase}/OBJINDEX.bin`)).createDataView();
+        const [objectsTab, objectsBin, objindexBin] = await Promise.all([
+            dataFetcher.fetchData(`${pathBase}/OBJECTS.tab`),
+            dataFetcher.fetchData(`${pathBase}/OBJECTS.bin`),
+            dataFetcher.fetchData(`${pathBase}/OBJINDEX.bin`),
+        ]);
+        this.objectsTab = objectsTab.createDataView();
+        this.objectsBin = objectsBin.createDataView();
+        this.objindexBin = objindexBin.createDataView();
     }
 
     public loadObject(objType: number): SFAObject {

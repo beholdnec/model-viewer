@@ -43,6 +43,7 @@ function loadDIRn(data: ArrayBufferSlice): ArrayBuffer {
 }
 
 // Reference: <https://www.kernel.org/doc/Documentation/lzo.txt>
+// FIXME: Replace with existing LZO implementation that I didn't realize existed!
 function loadLZOn(data: ArrayBufferSlice, srcOffs: number): ArrayBuffer {
     const dv = data.createDataView();
     const uncompSize = dv.getUint32(srcOffs + 0x8)

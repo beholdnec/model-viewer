@@ -40,8 +40,10 @@ export class BlockCollection implements IBlockCollection {
         } else {
             const subdir = getSubdir(this.mod, gameInfo);
             try {
-                const tex1Tab = await dataFetcher.fetchData(`${pathBase}/${subdir}/TEX1.tab`);
-                const tex1Bin = await dataFetcher.fetchData(`${pathBase}/${subdir}/TEX1.bin`);
+                const [tex1Tab, tex1Bin] = await Promise.all([
+                    dataFetcher.fetchData(`${pathBase}/${subdir}/TEX1.tab`),
+                    dataFetcher.fetchData(`${pathBase}/${subdir}/TEX1.bin`),
+                ]);
                 this.texColl = new SFATextureCollection(tex1Tab, tex1Bin);
             } catch (e) {
                 console.warn(`Failed to load textures for subdirectory ${subdir}. Using fake textures instead. Exception:`);

@@ -37,11 +37,19 @@ class SFABlockFetcher implements BlockFetcher {
             console.log(`isDeletedMap; subdir ${subdir}`);
             // this.blocksTab = (await dataFetcher.fetchData(`${pathBase}/${subdir}/mod${getModNumber(locationNum)}.tab`)).createDataView();
             // this.blocksBin = await dataFetcher.fetchData(`${pathBase}/${subdir}/mod${getModNumber(locationNum)}.bin`);
-            this.blocksTab = (await dataFetcher.fetchData(`${pathBase}/mod${getModNumber(locationNum)}.tab`)).createDataView();
-            this.blocksBin = await dataFetcher.fetchData(`${pathBase}/mod${getModNumber(locationNum)}.bin`);
+            const [blocksTab, blocksBin] = await Promise.all([
+                dataFetcher.fetchData(`${pathBase}/mod${getModNumber(locationNum)}.tab`),
+                dataFetcher.fetchData(`${pathBase}/mod${getModNumber(locationNum)}.bin`),
+            ]);
+            this.blocksTab = blocksTab.createDataView();
+            this.blocksBin = blocksBin;
         } else {
-            this.blocksTab = (await dataFetcher.fetchData(`${pathBase}/${subdir}/mod${getModNumber(locationNum)}.tab`)).createDataView();
-            this.blocksBin = await dataFetcher.fetchData(`${pathBase}/${subdir}/mod${getModNumber(locationNum)}.zlb.bin`);
+            const [blocksTab, blocksBin] = await Promise.all([
+                dataFetcher.fetchData(`${pathBase}/${subdir}/mod${getModNumber(locationNum)}.tab`),
+                dataFetcher.fetchData(`${pathBase}/${subdir}/mod${getModNumber(locationNum)}.zlb.bin`),
+            ]);
+            this.blocksTab = blocksTab.createDataView();
+            this.blocksBin = blocksBin;
         }
     }
 
@@ -416,8 +424,10 @@ class SFABlockExhibitDesc implements Viewer.SceneDesc {
         if (this.useAncientTextures) {
             this.texColl = new FalseTextureCollection(device);
         } else {
-            const tex1Tab = await dataFetcher.fetchData(`${directory}/TEX1.tab`);
-            const tex1Bin = await dataFetcher.fetchData(`${directory}/TEX1.bin`);
+            const [tex1Tab, tex1Bin] = await Promise.all([
+                dataFetcher.fetchData(`${directory}/TEX1.tab`),
+                dataFetcher.fetchData(`${directory}/TEX1.bin`),
+            ]);
             this.texColl = new SFATextureCollection(tex1Tab, tex1Bin);
         }
         const blockFetcher = new BlockExhibitFetcher(this.useCompression);
