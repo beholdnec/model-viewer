@@ -11,6 +11,7 @@ import { BlockRenderer, AncientBlockRenderer, BlockFetcher } from './blocks';
 import { loadRes, getSubdir } from './resource';
 import { SFARenderer } from './render';
 import { TextureCollection, SFATextureCollection, FalseTextureCollection } from './textures';
+import { SFASceneDesc } from './scene';
 
 export interface GameInfo {
     pathBase: string;
@@ -593,6 +594,9 @@ const sceneDescs = [
     // new SFAMapDesc(115, 'loc115', 'Location'),
     // new SFAMapDesc(116, 'loc116', 'Location'), 
     // (end)
+
+    'Full Scenes',
+    new SFASceneDesc('hollow', 'ThornTail Hollow'),
 
     // 'Block Exhibits',
     // new SFABlockExhibitDesc('animtest', 'mod6', 'Animation Test Blocks'),
