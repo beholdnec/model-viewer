@@ -1,4 +1,3 @@
-
 import * as pako from 'pako';
 import { hexzero } from '../util';
 import ArrayBufferSlice from '../ArrayBufferSlice';
@@ -198,9 +197,10 @@ export function loadRes(data: ArrayBufferSlice): ArrayBufferSlice {
     switch (magic) {
     case stringToFourCC('ZLB\0'):
         return new ArrayBufferSlice(loadZLB(data));
-    case stringToFourCC('DIRn'): // FIXME: actually just "DIR"
+    case stringToFourCC('DIRn'): // FIXME: actually just "DIR" is checked
         return new ArrayBufferSlice(loadDIRn(data));
     case stringToFourCC('LZOn'):
+        // LZO occurs in the demo only.
         return new ArrayBufferSlice(loadLZOn(data, 0));
     default:
         console.warn(`Invalid magic identifier 0x${hexzero(magic, 8)}`);

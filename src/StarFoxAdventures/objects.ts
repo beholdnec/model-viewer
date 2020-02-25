@@ -2,7 +2,7 @@ import { DataFetcher } from '../DataFetcher';
 
 import { GameInfo } from './scenes';
 
-function sliceDataView(data: DataView, byteOffset: number, byteLength?: number): DataView {
+function dataSubarray(data: DataView, byteOffset: number, byteLength?: number): DataView {
     return new DataView(data.buffer, data.byteOffset + byteOffset, byteLength);
 }
 
@@ -45,6 +45,6 @@ export class ObjectManager {
     public loadObject(objType: number): SFAObject {
         objType = this.objindexBin.getUint16(objType * 2);
         const offs = this.objectsTab.getUint32(objType * 4);
-        return new SFAObject(objType, sliceDataView(this.objectsBin, offs));
+        return new SFAObject(objType, dataSubarray(this.objectsBin, offs));
     }
 }

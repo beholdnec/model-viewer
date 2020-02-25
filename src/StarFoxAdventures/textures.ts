@@ -6,53 +6,44 @@ import { GfxDevice, GfxMipFilterMode, GfxTexture, GfxSampler, GfxFormat, makeTex
 
 import { loadRes } from './resource';
 
-interface LoadedTexture {
-    offset: number;
-    texture: GX_Texture.TextureInputGX;
-    wrapS: number;
-    wrapT: number;
-    minFilt: number;
-    magFilt: number;
-}
-
-export interface DecodedTexture {
+export interface SFATexture {
     gfxTexture: GfxTexture;
     gfxSampler: GfxSampler;
     width: number;
     height: number;
 }
 
-function loadTex(texData: ArrayBufferSlice, offset: number): LoadedTexture {
+export abstract class TextureCollection {
+    public abstract getTexture(device: GfxDevice, num: number): SFATexture | null;
+}
+
+function loadTexture(device: GfxDevice, texData: ArrayBufferSlice): SFATexture {
     const dv = texData.createDataView();
-    const result = {
-        offset,
-        texture: {
-            name: `Texture`,
-            width: dv.getUint16(0x0A),
-            height: dv.getUint16(0x0C),
-            format: dv.getUint8(0x16),
-            mipCount: dv.getUint16(0x1c) + 1,
-            data: texData.slice(0x60),
-        },
+    const textureInput = {
+        name: `Texture`,
+        width: dv.getUint16(0x0A),
+        height: dv.getUint16(0x0C),
+        format: dv.getUint8(0x16),
+        mipCount: dv.getUint16(0x1c) + 1,
+        data: texData.slice(0x60),
+    };
+    const fields = {
         wrapS: dv.getUint8(0x17),
         wrapT: dv.getUint8(0x18),
         minFilt: dv.getUint8(0x19),
         magFilt: dv.getUint8(0x1A),
     };
-    return result;
-}
-
-function decodeTex(device: GfxDevice, loaded: LoadedTexture): DecodedTexture {
-    const mipChain = GX_Texture.calcMipChain(loaded.texture, loaded.texture.mipCount);
+    
+    const mipChain = GX_Texture.calcMipChain(textureInput, textureInput.mipCount);
     const gfxTexture = loadTextureFromMipChain(device, mipChain).gfxTexture;
     
     // GL texture is bound by loadTextureFromMipChain.
-    const [minFilter, mipFilter] = translateTexFilterGfx(loaded.minFilt);
+    const [minFilter, mipFilter] = translateTexFilterGfx(fields.minFilt);
     const gfxSampler = device.createSampler({
-        wrapS: translateWrapModeGfx(loaded.wrapS),
-        wrapT: translateWrapModeGfx(loaded.wrapT),
-        minFilter: minFilter, // TODO: implement mip filters
-        magFilter: translateTexFilterGfx(loaded.magFilt)[0],
+        wrapS: translateWrapModeGfx(fields.wrapS),
+        wrapT: translateWrapModeGfx(fields.wrapT),
+        minFilter: minFilter,
+        magFilter: translateTexFilterGfx(fields.magFilt)[0],
         mipFilter: mipFilter,
         minLOD: 0,
         maxLOD: 100,
@@ -61,8 +52,8 @@ function decodeTex(device: GfxDevice, loaded: LoadedTexture): DecodedTexture {
     return {
         gfxTexture,
         gfxSampler,
-        width: loaded.texture.width,
-        height: loaded.texture.height,
+        width: textureInput.width,
+        height: textureInput.height,
     };
 }
 
@@ -70,7 +61,7 @@ function isValidTextureTabValue(tabValue: number) {
     return tabValue != 0xFFFFFFFF && (tabValue & 0x80000000) != 0;
 }
 
-function loadFirstValidTexture(device: GfxDevice, tab: ArrayBufferSlice, bin: ArrayBufferSlice): DecodedTexture | null {
+function loadFirstValidTexture(device: GfxDevice, tab: ArrayBufferSlice, bin: ArrayBufferSlice): SFATexture | null {
     const tabDv = tab.createDataView();
     let firstValidId = 0;
     let found = false;
@@ -89,38 +80,26 @@ function loadFirstValidTexture(device: GfxDevice, tab: ArrayBufferSlice, bin: Ar
     if (!found) {
         return null;
     }
-    console.log(`loading first valid id ${firstValidId}`);
+
     return loadTextureFromTable(device, tab, bin, firstValidId);
 }
 
-function loadTextureFromTable(device: GfxDevice, tab: ArrayBufferSlice, bin: ArrayBufferSlice, id: number): (DecodedTexture | null) {
+function loadTextureFromTable(device: GfxDevice, tab: ArrayBufferSlice, bin: ArrayBufferSlice, id: number): (SFATexture | null) {
     const tabDv = tab.createDataView();
-    const idOffs = id * 4;
-    if (idOffs < 0 || idOffs + 4 >= tabDv.byteLength) {
-        console.warn(`Texture id 0x${id.toString(16)} out of range; using first valid texture!`);
-        return loadFirstValidTexture(device, tab, bin);
-    }
-    const tab0 = tabDv.getUint32(id * 4);
-    if (isValidTextureTabValue(tab0)) {
-        // Loadable texture (?)
-        const binOffs = (tab0 & 0x00FFFFFF) * 2;
+    const tabValue = tabDv.getUint32(id * 4);
+    if (isValidTextureTabValue(tabValue)) {
+        const binOffs = (tabValue & 0x00FFFFFF) * 2;
         const compData = bin.slice(binOffs);
         const uncompData = loadRes(compData);
-        const loaded = loadTex(uncompData, (tab0 & 0x00FFFFFF) * 2);
-        const decoded = decodeTex(device, loaded);
-        return decoded;
+        return loadTexture(device, uncompData);
     } else {
         // TODO: also seen is value 0x01000000
-        console.warn(`Texture id 0x${id.toString(16)} (tab value 0x${hexzero(tab0, 8)}) not found in table. Using first valid texture.`);
+        console.warn(`Texture id 0x${id.toString(16)} (tab value 0x${hexzero(tabValue, 8)}) not found in table. Using first valid texture.`);
         return loadFirstValidTexture(device, tab, bin);
     }
 }
 
-export abstract class TextureCollection {
-    public abstract getTexture(device: GfxDevice, num: number): DecodedTexture | null;
-}
-
-function makeFalseTexture(device: GfxDevice, num: number): DecodedTexture {
+function makeFakeTexture(device: GfxDevice, num: number): SFATexture {
     const gfxTexture = device.createTexture(makeTextureDescriptor2D(GfxFormat.U8_RGBA_NORM, 2, 2, 1));
     const gfxSampler = device.createSampler({
         wrapS: GfxWrapMode.REPEAT,
@@ -132,10 +111,9 @@ function makeFalseTexture(device: GfxDevice, num: number): DecodedTexture {
         maxLOD: 100,
     });
 
-
     // Thanks, StackOverflow.
     let seed = num;
-    console.log(`making false texture with seed ${seed}`);
+    console.log(`Creating fake texture from seed ${seed}`);
     function random() {
         let x = Math.sin(seed++) * 10000;
         return x - Math.floor(x);
@@ -164,37 +142,34 @@ function makeFalseTexture(device: GfxDevice, num: number): DecodedTexture {
     }
 }
 
-export class FalseTextureCollection implements TextureCollection {
-    textures: DecodedTexture[] = [];
-
-    constructor(device: GfxDevice) {
-    }
-
-    public getTexture(device: GfxDevice, num: number): DecodedTexture | null {
-        if (this.textures[num] === undefined) {
-            this.textures[num] = makeFalseTexture(device, num);
-        }
-        return this.textures[num];
-    }
-}
-
 export class SFATextureCollection implements TextureCollection {
-    decodedTextures: (DecodedTexture | null)[] = [];
+    textures: (SFATexture | null)[] = [];
 
     constructor(public tex1Tab: ArrayBufferSlice, public tex1Bin: ArrayBufferSlice) {
     }
 
-    public getTexture(device: GfxDevice, num: number): DecodedTexture | null {
-        if (this.decodedTextures[num] === undefined) {
+    public getTexture(device: GfxDevice, num: number): SFATexture | null {
+        if (this.textures[num] === undefined) {
             try {
-                this.decodedTextures[num] = loadTextureFromTable(device, this.tex1Tab, this.tex1Bin, num);
+                this.textures[num] = loadTextureFromTable(device, this.tex1Tab, this.tex1Bin, num);
             } catch (e) {
                 console.warn(`Failed to load texture 0x${num.toString(16)} due to exception:`);
                 console.error(e);
-                this.decodedTextures[num] = makeFalseTexture(device, num);
+                this.textures[num] = makeFakeTexture(device, num);
             }
         }
 
-        return this.decodedTextures[num];
+        return this.textures[num];
+    }
+}
+
+export class FakeTextureCollection implements TextureCollection {
+    textures: SFATexture[] = [];
+
+    public getTexture(device: GfxDevice, num: number): SFATexture | null {
+        if (this.textures[num] === undefined) {
+            this.textures[num] = makeFakeTexture(device, num);
+        }
+        return this.textures[num];
     }
 }

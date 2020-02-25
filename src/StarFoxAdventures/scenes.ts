@@ -7,10 +7,10 @@ import ArrayBufferSlice from '../ArrayBufferSlice';
 import { mat4 } from 'gl-matrix';
 
 import { SFAMapDesc, AncientMapDesc } from './maps';
-import { BlockRenderer, AncientBlockRenderer, BlockFetcher } from './blocks';
+import { SFABlockRenderer, AncientBlockRenderer, BlockFetcher } from './blocks';
 import { loadRes, getSubdir } from './resource';
 import { SFARenderer } from './render';
-import { TextureCollection, SFATextureCollection, FalseTextureCollection } from './textures';
+import { TextureCollection, SFATextureCollection, FakeTextureCollection } from './textures';
 import { SFAWorldDesc } from './world';
 
 export interface GameInfo {
@@ -422,7 +422,7 @@ class SFABlockExhibitDesc implements Viewer.SceneDesc {
         console.log(`Creating block exhibit for ${directory}/${this.fileName} ...`);
 
         if (this.useAncientTextures) {
-            this.texColl = new FalseTextureCollection(device);
+            this.texColl = new FakeTextureCollection();
         } else {
             const [tex1Tab, tex1Bin] = await Promise.all([
                 dataFetcher.fetchData(`${directory}/TEX1.tab`),
@@ -455,7 +455,7 @@ class SFABlockExhibitDesc implements Viewer.SceneDesc {
                     if (this.useAncientBlocks) {
                         blockRenderer = new AncientBlockRenderer(device, blockData, this.texColl);
                     } else {
-                        blockRenderer = new BlockRenderer(device, blockData, this.texColl);
+                        blockRenderer = new SFABlockRenderer(device, blockData, this.texColl);
                     }
                     if (!blockRenderer) {
                         console.warn(`Block ${blockNum} not found`);
