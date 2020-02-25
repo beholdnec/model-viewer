@@ -601,8 +601,8 @@ const sceneDescs = [
     // new SFAMapDesc(116, 'loc116', 'Location'), 
     // (end)
 
-    'Full Scenes',
-    new SFAWorldDesc('hollow', 'ThornTail Hollow'),
+    // 'Full Scenes',
+    // new SFAWorldDesc('hollow', 'ThornTail Hollow'),
 
     // 'Block Exhibits',
     // new SFABlockExhibitDesc('animtest', 'mod6', 'Animation Test Blocks'),
