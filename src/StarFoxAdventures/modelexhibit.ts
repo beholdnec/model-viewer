@@ -243,6 +243,8 @@ class ModelExhibitRenderer extends SFARenderer {
             ...sceneCtx,
             showDevGeometry: true,
             ambienceNum: 0,
+            furLayer: 0,
+            overrideIndMtx: [],
             setupLights: () => {},
         };
 

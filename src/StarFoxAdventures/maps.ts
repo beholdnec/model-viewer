@@ -257,6 +257,8 @@ class MapSceneRenderer extends SFARenderer {
             ...sceneCtx,
             showDevGeometry: false,
             ambienceNum: 0,
+            furLayer: 0,
+            overrideIndMtx: [],
             setupLights: () => {},
         };
 

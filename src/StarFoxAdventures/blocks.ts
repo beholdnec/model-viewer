@@ -421,7 +421,7 @@ export class AncientBlockRenderer implements BlockRenderer {
                     }
 
                     const newGeom = new ShapeGeometry(vtxArrays, vcd, vat, displayList, false);
-                    const newMat = new CommonShapeMaterial(this.animController);
+                    const newMat = new CommonShapeMaterial();
                     newMat.setMaterial(material);
 
                     const newShape = new Shape(newGeom, newMat, false);

@@ -984,6 +984,8 @@ export class ObjectInstance {
             this.modelInst.prepareToRender(device, renderInstManager, {
                 ...objectCtx,
                 ambienceNum: this.ambienceNum,
+                furLayer: 0,
+                overrideIndMtx: [],
             }, mtx, drawStep);
 
             // Draw bones

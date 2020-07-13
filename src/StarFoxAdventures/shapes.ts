@@ -1,9 +1,6 @@
-import * as Viewer from '../viewer';
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4 } from 'gl-matrix';
 import { nArray } from '../util';
-import { ColorTexture } from '../gfx/helpers/RenderTargetHelpers';
-import { GfxDevice, GfxSampler, GfxVertexBufferDescriptor, GfxInputState, GfxInputLayout, GfxBuffer, GfxBufferUsage, GfxIndexBufferDescriptor, GfxBufferFrequencyHint } from '../gfx/platform/GfxPlatform';
-import { GfxWrapMode, GfxMipFilterMode, GfxTexFilterMode } from '../gfx/platform/GfxPlatform';
+import { GfxDevice, GfxVertexBufferDescriptor, GfxInputState, GfxInputLayout, GfxBuffer, GfxBufferUsage, GfxIndexBufferDescriptor, GfxBufferFrequencyHint } from '../gfx/platform/GfxPlatform';
 import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexLayout, LoadedVertexData, GX_Array, VtxLoader, VertexAttributeInput, LoadedVertexPacket, compilePartialVtxLoader } from '../gx/gx_displaylist';
 import { PacketParams, MaterialParams, GXMaterialHelperGfx, createInputLayout, ub_PacketParams, ub_PacketParamsBufferSize, fillPacketParamsData, ColorKind } from '../gx/gx_render';
 import { GfxRenderInstManager, GfxRenderInst } from "../gfx/render/GfxRenderer";
@@ -15,7 +12,6 @@ import { GXMaterial } from '../gx/gx_material';
 import { colorNewFromRGBA, colorCopy, White } from '../Color';
 
 import { SFAMaterial } from './materials';
-import { SFAAnimationController } from './animation';
 import { ModelRenderContext } from './models';
 import { ViewState, computeModelView } from './util';
 
@@ -193,13 +189,8 @@ export class CommonShapeMaterial implements ShapeMaterial {
     private gxMaterial: GXMaterial | undefined;
     private materialHelper: GXMaterialHelperGfx;
     private materialParams = new MaterialParams();
-    private furLayer: number = 0;
-    private overrideIndMtx: (mat4 | undefined)[] = [];
     private viewState: ViewState | undefined;
     private scratchMtx = mat4.create();
-
-    public constructor(private animController: SFAAnimationController) {
-    }
 
     // Caution: Material is referenced, not copied.
     public setMaterial(material: SFAMaterial) {
@@ -214,23 +205,7 @@ export class CommonShapeMaterial implements ShapeMaterial {
         }
     }
 
-    public setFurLayer(layer: number) {
-        this.furLayer = layer;
-    }
-
-    public setOverrideIndMtx(num: number, mtx?: mat4) {
-        if (mtx !== undefined) {
-            if (this.overrideIndMtx[num] !== undefined) {
-                mat4.copy(this.overrideIndMtx[num]!, mtx);
-            } else {
-                this.overrideIndMtx[num] = mat4.clone(mtx);
-            }
-        } else {
-            this.overrideIndMtx[num] = undefined;
-        }
-    }
-
-    public setOnRenderInst(device: GfxDevice, renderInstManager: GfxRenderInstManager, renderInst: GfxRenderInst, modelMatrix: mat4, modelCtx: ModelRenderContext, boneMatrices: mat4[]) {
+    public setOnRenderInst(device: GfxDevice, renderInstManager: GfxRenderInstManager, renderInst: GfxRenderInst, modelMatrix: mat4, modelCtx: ModelRenderContext) {
         this.updateMaterialHelper();
         
         const materialOffs = this.materialHelper.allocateMaterialParams(renderInst);
@@ -241,7 +216,7 @@ export class CommonShapeMaterial implements ShapeMaterial {
                 modelViewMtx: mat4.create(),
                 invModelViewMtx: mat4.create(),
                 outdoorAmbientColor: colorNewFromRGBA(1.0, 1.0, 1.0, 1.0),
-                furLayer: this.furLayer,
+                furLayer: modelCtx.furLayer,
             };
         }
 
@@ -270,8 +245,8 @@ export class CommonShapeMaterial implements ShapeMaterial {
         modelCtx.setupLights(this.materialParams.u_Lights, modelCtx);
 
         for (let i = 0; i < 3; i++) {
-            if (this.overrideIndMtx[i] !== undefined) {
-                mat4.copy(this.materialParams.u_IndTexMtx[i], this.overrideIndMtx[i]!);
+            if (modelCtx.overrideIndMtx[i] !== undefined) {
+                mat4.copy(this.materialParams.u_IndTexMtx[i], modelCtx.overrideIndMtx[i]!);
             }
         }
 

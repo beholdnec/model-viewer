@@ -1,6 +1,4 @@
 import ArrayBufferSlice from '../ArrayBufferSlice';
-import { ViewerRenderInput } from '../viewer';
-import { SFAAnimationController } from './animation';
 import { mat4, vec3 } from 'gl-matrix';
 import { Color } from '../Color';
 import { Camera, computeViewMatrix } from '../Camera';
@@ -51,6 +49,19 @@ export function mat4FromRowMajor(
     m20: number, m21: number, m22: number, m23: number,
     m30: number, m31: number, m32: number, m33: number) {
     return mat4.fromValues(
+        m00, m10, m20, m30,
+        m01, m11, m21, m31,
+        m02, m12, m22, m32,
+        m03, m13, m23, m33,
+    )
+}
+
+export function mat4SetRowMajor(dst: mat4,
+    m00: number, m01: number, m02: number, m03: number,
+    m10: number, m11: number, m12: number, m13: number,
+    m20: number, m21: number, m22: number, m23: number,
+    m30: number, m31: number, m32: number, m33: number) {
+    return mat4.set(dst,
         m00, m10, m20, m30,
         m01, m11, m21, m31,
         m02, m12, m22, m32,

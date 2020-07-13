@@ -14,7 +14,7 @@ import { GameInfo } from './scenes';
 import { SFAMaterial, ShaderAttrFlags } from './materials';
 import { SFAAnimationController } from './animation';
 import { Shader, parseShader, ShaderFlags, BETA_MODEL_SHADER_FIELDS, SFA_SHADER_FIELDS, SFADEMO_MAP_SHADER_FIELDS, SFADEMO_MODEL_SHADER_FIELDS, MaterialFactory } from './materials';
-import { LowBitReader, dataSubarray, arrayBufferSliceFromDataView, dataCopy, readVec3, getCamPos } from './util';
+import { LowBitReader, dataSubarray, arrayBufferSliceFromDataView, dataCopy, readVec3, getCamPos, mat4FromRowMajor, mat4SetRowMajor } from './util';
 import { BlockRenderer } from './blocks';
 import { loadRes } from './resource';
 import { TextureFetcher } from './textures';
@@ -109,6 +109,8 @@ interface Water {
 export interface ModelRenderContext extends SceneRenderContext {
     showDevGeometry: boolean;
     ambienceNum: number;
+    furLayer: number;
+    overrideIndMtx: (mat4 | undefined)[];
     setupLights: (lights: GX_Material.Light[], modelCtx: ModelRenderContext) => void;
 }
 
@@ -178,18 +180,19 @@ class ModelShapes {
                 mat4.mul(this.scratchMtx, matrix, this.scratchMtx);
 
                 const mat = fur.shape.material as CommonShapeMaterial;
-                mat.setFurLayer(j);
+                modelCtx.furLayer = j;
                 const m00 = (j + 1) / 16 * 0.5;
                 const m11 = m00;
-                this.scratchMtx2 = mat4.fromValues(
+                mat4SetRowMajor(this.scratchMtx2,
                     m00, 0.0, 0.0, 0.0,
                     0.0, m11, 0.0, 0.0,
                     0.0, 0.0, 0.0, 0.0,
                     0.0, 0.0, 0.0, 0.0
                 );
-                mat.setOverrideIndMtx(0, this.scratchMtx2);
+                modelCtx.overrideIndMtx[0] = this.scratchMtx2;
                 fur.shape.prepareToRender(device, renderInstManager, this.scratchMtx, modelCtx, boneMatrices);
-                mat.setOverrideIndMtx(0, undefined);
+                modelCtx.overrideIndMtx[0] = undefined;
+                modelCtx.furLayer = 0;
             }
         }
     }
@@ -828,7 +831,7 @@ export class Model {
             const newShape = new ShapeGeometry(vtxArrays, vcd, vat, displayList, self.hasFineSkinning);
             newShape.setPnMatrixMap(pnMatrixMap, self.hasFineSkinning);
 
-            const newMat = new CommonShapeMaterial(self.animController);
+            const newMat = new CommonShapeMaterial();
             newMat.setMaterial(material);
 
             const newModelShape = new Shape(newShape, newMat, false);
@@ -889,7 +892,7 @@ export class Model {
                             const newShape = new ShapeGeometry(vtxArrays, vcd, vat, displayList, self.hasFineSkinning);
                             newShape.setPnMatrixMap(pnMatrixMap, self.hasFineSkinning);
 
-                            const newMat = new CommonShapeMaterial(self.animController);
+                            const newMat = new CommonShapeMaterial();
                             newMat.setMaterial(curMaterial!);
 
                             const newModelShape = new Shape(newShape, newMat, !!(curShader.flags & ShaderFlags.DevGeometry));

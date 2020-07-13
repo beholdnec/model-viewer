@@ -321,6 +321,8 @@ class WorldRenderer extends SFARenderer {
             ...sceneCtx,
             showDevGeometry: true,
             ambienceNum: 0,
+            furLayer: 0,
+            overrideIndMtx: [],
             setupLights: this.setupLights.bind(this),
         };
 
@@ -387,6 +389,8 @@ class WorldRenderer extends SFARenderer {
             ...sceneCtx,
             showDevGeometry: this.showDevGeometry,
             ambienceNum: 0, // Always use ambience 0 when rendering the map,
+            furLayer: 0,
+            overrideIndMtx: [],
             setupLights: this.setupLights.bind(this),
         }
 
