@@ -191,7 +191,7 @@ export class GfxRenderInst {
     // Bindings building.
     private _uniformBuffer: GfxRenderDynamicUniformBuffer;
     private _bindingDescriptors: GfxBindingsDescriptor[] = nArray(1, () => ({ bindingLayout: null!, samplerBindings: [], uniformBufferBindings: [] }));
-    private _dynamicUniformBufferByteOffsets: number[] = nArray(4, () => 0);
+    private _dynamicUniformBufferByteOffsets: number[] = nArray(5, () => 0);
 
     public _flags: number = 0;
     private _lateSamplerBindings: string[] = [];

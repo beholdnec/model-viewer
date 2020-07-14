@@ -420,7 +420,7 @@ export class AncientBlockRenderer implements BlockRenderer {
                         rebuild: () => {},
                     }
 
-                    const newGeom = new ShapeGeometry(vtxArrays, vcd, vat, displayList, false);
+                    const newGeom = new ShapeGeometry(vtxArrays, vcd, vat, displayList, false, false);
                     const newMat = new CommonShapeMaterial();
                     newMat.setMaterial(material);
 

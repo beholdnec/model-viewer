@@ -78,6 +78,9 @@ export const enum VertexAttributeInput {
     TEX23,
     TEX45,
     TEX67,
+    // These are not supported in original GX, but can be used by noclip.
+    BLENDINDICES,
+    BLENDWEIGHTS,
     COUNT,
 }
 
@@ -465,7 +468,7 @@ function translateVatLayout(vatFormat: GX_VtxAttrFmt[], vcd: GX_VtxDesc[]): VatL
     return { srcVertexSize, vatFormat, vcd };
 }
 
-export function compileLoadedVertexLayout(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDesc[]): VertexLayout {
+export function compileLoadedVertexLayout(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDesc[], useVtxBlends: boolean = false): VertexLayout {
     // Copy inputs since we use them as a cache.
     vat = arrayCopy(vat, vatCopy);
     vcd = arrayCopy(vcd, vcdCopy) as GX_VtxDesc[];
@@ -554,13 +557,18 @@ export function compileLoadedVertexLayout(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDes
         vertexAttributeFormats[vtxAttrib] = fieldFormat;
     }
 
+    if (useVtxBlends) {
+        allocateVertexInput(VertexAttributeInput.BLENDINDICES, GfxFormat.F32_RGBA); // TODO: use integer format?
+        allocateVertexInput(VertexAttributeInput.BLENDWEIGHTS, GfxFormat.F32_RGBA);
+    }
+
     // Align the whole thing to our minimum required alignment (F32).
     dstVertexSize = align(dstVertexSize, 4);
     const vertexBufferStrides = [dstVertexSize];
 
     const indexFormat = GfxFormat.U16_R;
 
-    return { indexFormat, vertexBufferStrides, singleVertexInputLayouts, vertexAttributeOffsets, vertexAttributeFormats, vatLayouts, vat, vcd };
+    return { indexFormat, vertexBufferStrides, singleVertexInputLayouts, vertexAttributeOffsets, vertexAttributeFormats, vatLayouts, vat, vcd, useVtxBlends };
 }
 //#endregion
 
@@ -1115,6 +1123,7 @@ class VtxLoaderImpl implements VtxLoader {
 interface VtxLoaderDesc {
     vat: GX_VtxAttrFmt[][];
     vcd: GX_VtxDesc[];
+    useVtxBlends: boolean;
 }
 
 type EqualFunc<K> = (a: K, b: K) => boolean;
@@ -1174,6 +1183,7 @@ function vcdEqual(a: GX_VtxDesc | undefined, b: GX_VtxDesc | undefined): boolean
 function vtxLoaderDescEqual(a: VtxLoaderDesc, b: VtxLoaderDesc): boolean {
     if (!arrayEqual(a.vat, b.vat, vatEqual)) return false;
     if (!arrayEqual(a.vcd, b.vcd, vcdEqual)) return false;
+    if (a.useVtxBlends !== b.useVtxBlends) return false;
     return true;
 }
 
@@ -1183,21 +1193,21 @@ function compileVtxLoaderDesc(desc: VtxLoaderDesc): VtxLoader {
     if (loader === null) {
         const vat = desc.vat;
         const vcd = desc.vcd;
-        const loadedVertexLayout: VertexLayout = compileLoadedVertexLayout(vat, vcd);
+        const loadedVertexLayout: VertexLayout = compileLoadedVertexLayout(vat, vcd, desc.useVtxBlends);
         loader = new VtxLoaderImpl(loadedVertexLayout);
         cache.add(loadedVertexLayout, loader);
     }
     return loader;
 }
 
-export function compileVtxLoaderMultiVat(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDesc[]): VtxLoader {
-    const desc = { vat, vcd };
+export function compileVtxLoaderMultiVat(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDesc[], useVtxBlends: boolean = false): VtxLoader {
+    const desc = { vat, vcd, useVtxBlends };
     return compileVtxLoaderDesc(desc);
 }
 
-export function compileVtxLoader(vatFormat: GX_VtxAttrFmt[], vcd: GX_VtxDesc[]): VtxLoader {
+export function compileVtxLoader(vatFormat: GX_VtxAttrFmt[], vcd: GX_VtxDesc[], useVtxBlends: boolean = false): VtxLoader {
     const vat = [vatFormat];
-    const desc = { vat, vcd };
+    const desc = { vat, vcd, useVtxBlends };
     return compileVtxLoaderDesc(desc);
 }
 

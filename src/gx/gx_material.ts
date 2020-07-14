@@ -14,6 +14,7 @@ import { AttachmentStateSimple, setAttachmentStateSimple } from '../gfx/helpers/
 import { MathConstants, transformVec3Mat4w1, transformVec3Mat4w0 } from '../MathHelpers';
 import { DisplayListRegisters, VertexAttributeInput } from './gx_displaylist';
 import { DeviceProgram } from '../Program';
+import { NUM_BLEND_MATRICES } from './gx_render';
 
 // TODO(jstpierre): Move somewhere better...
 export const EFB_WIDTH = 640;
@@ -41,6 +42,7 @@ export interface GXMaterial {
     ropInfo: RopInfo;
 
     // Optimization and other state.
+    useVtxBlends?: boolean;
     usePnMtxIdx?: boolean;
     useTexMtxIdx?: boolean[];
     hasPostTexMtxBlock?: boolean;
@@ -227,6 +229,8 @@ const vtxAttributeGenDefs: VertexAttributeGenDef[] = [
     { attrInput: VertexAttributeInput.TEX23,         name: "Tex23",         format: GfxFormat.F32_RGBA },
     { attrInput: VertexAttributeInput.TEX45,         name: "Tex45",         format: GfxFormat.F32_RGBA },
     { attrInput: VertexAttributeInput.TEX67,         name: "Tex67",         format: GfxFormat.F32_RGBA },
+    { attrInput: VertexAttributeInput.BLENDINDICES,  name: "BlendIndices",  format: GfxFormat.F32_RGBA },
+    { attrInput: VertexAttributeInput.BLENDWEIGHTS,  name: "BlendWeights",  format: GfxFormat.F32_RGBA },
 ];
 
 export function getVertexInputLocation(attrInput: VertexAttributeInput): number {
@@ -331,6 +335,10 @@ layout(row_major, std140) uniform ub_PacketParams {
     Mat4x3 u_PosMtx[10];
 };
 
+layout(row_major, std140) uniform ub_VtxBlendParams {
+    Mat4x3 u_VtxBlendMtx[${NUM_BLEND_MATRICES}];
+};
+
 uniform sampler2D u_Texture[8];
 `;
 }
@@ -355,6 +363,7 @@ export class GX_Program extends DeviceProgram {
     public static ub_SceneParams = 0;
     public static ub_MaterialParams = 1;
     public static ub_PacketParams = 2;
+    public static ub_VtxBlendParams = 3; // TODO: use a float texture instead
 
     public name: string;
 
@@ -491,6 +500,11 @@ ${this.generateLightAttnFn(chan, lightName)}
         return this.material.lightChannels.map((lightChannel, i) => {
             return this.generateLightChannel(lightChannel, `v_Color${i}`, i);
         }).join('\n');
+    }
+
+    private generateMulPntMatrixBlended(src: string, funcName: string = `Mul`): string {
+        // TODO
+        return `${src}.xyz /* blended */`;
     }
 
     // Output is a vec3, src is a vec4.
@@ -1188,9 +1202,13 @@ ${this.generateFogFunc(`t_Fog`)}
     }
 
     private generateMulPos(): string {
-        // Default to using pnmtxidx.
-        const usePnMtxIdx = this.material.usePnMtxIdx !== undefined ? this.material.usePnMtxIdx : true;
         const src = `vec4(a_Position.xyz, 1.0)`;
+
+        if (this.material.useVtxBlends)
+            return this.generateMulPntMatrixBlended(src);
+
+        // Default to using pnmtxidx
+        const usePnMtxIdx = this.material.usePnMtxIdx !== undefined ? this.material.usePnMtxIdx : true;
         if (usePnMtxIdx)
             return this.generateMulPntMatrixDynamic(`a_Position.w`, src);
         else
@@ -1198,9 +1216,13 @@ ${this.generateFogFunc(`t_Fog`)}
     }
 
     private generateMulNrm(): string {
+        const src = `vec4(a_Normal.xyz, 0.0)`;
+
+        if (this.material.useVtxBlends)
+            return this.generateMulPntMatrixBlended(src, `MulNormalMatrix`);
+
         // Default to using pnmtxidx.
         const usePnMtxIdx = this.material.usePnMtxIdx !== undefined ? this.material.usePnMtxIdx : true;
-        const src = `vec4(a_Normal.xyz, 0.0)`;
         if (usePnMtxIdx)
             return this.generateMulPntMatrixDynamic(`a_Position.w`, src, `MulNormalMatrix`);
         else
@@ -1307,6 +1329,9 @@ ${this.generateAlphaTest()}
 ${this.generateFog()}
     gl_FragColor = t_PixelOut;
 }`;
+
+        console.log(`generated vertex shader: `);
+        console.log(`${this.vert}`);
     }
 }
 // #endregion

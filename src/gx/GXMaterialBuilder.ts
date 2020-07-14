@@ -110,6 +110,7 @@ export class GXMaterialBuilder {
     private indTexStages: IndTexStage[] = [];
     private alphaTest: AlphaTest;
     private ropInfo: RopInfo;
+    private useVtxBlends?: boolean;
     private usePnMtxIdx?: boolean;
 
     constructor(private name: string | null = null) {
@@ -339,6 +340,10 @@ export class GXMaterialBuilder {
         this.ropInfo.depthWrite = depthWrite;
     }
 
+    public setUseVtxBlends(v: boolean): void {
+        this.useVtxBlends = v;
+    }
+
     public setUsePnMtxIdx(v: boolean): void {
         this.usePnMtxIdx = v;
     }
@@ -358,6 +363,7 @@ export class GXMaterialBuilder {
             indTexStages: this.indTexStages.map(copyIndTexStage),
             alphaTest: copyAlphaTest(this.alphaTest),
             ropInfo: copyRopInfo(this.ropInfo),
+            useVtxBlends: this.useVtxBlends,
             usePnMtxIdx: this.usePnMtxIdx,
         };
         autoOptimizeMaterial(material);

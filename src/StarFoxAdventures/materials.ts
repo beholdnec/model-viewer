@@ -473,7 +473,7 @@ class StandardMaterial extends MaterialBase {
     private cprevIsValid = false;
     private aprevIsValid = false;
 
-    constructor(public device: GfxDevice, public factory: MaterialFactory, public shader: Shader, public texFetcher: TextureFetcher, private isMapBlock: boolean) {
+    constructor(public device: GfxDevice, public factory: MaterialFactory, public shader: Shader, public texFetcher: TextureFetcher, private isMapBlock: boolean, private useVtxBlends: boolean) {
         super(factory, shader);
     }
 
@@ -483,7 +483,10 @@ class StandardMaterial extends MaterialBase {
         
         if (!this.isMapBlock) {
             // Not a map block. Just do basic texturing.
-            this.mb.setUsePnMtxIdx(true);
+
+            this.mb.setUseVtxBlends(this.useVtxBlends);
+            this.mb.setUsePnMtxIdx(!this.useVtxBlends);
+
             if (this.shader.layers.length > 0 && this.shader.layers[0].texId !== null) {
                 const texMap = this.genTexMap(makeMaterialTexture(this.texFetcher.getTexture(this.device, this.shader.layers[0].texId!, true)));
                 const texCoord = this.genScrollableTexCoord(texMap, this.shader.layers[0].scrollingTexMtx);
@@ -1196,8 +1199,8 @@ export class MaterialFactory {
         return this.scrollingTexMtxs.length - 1;
     }
 
-    public buildMaterial(shader: Shader, texFetcher: TextureFetcher, isMapBlock: boolean): SFAMaterial {
-        return new StandardMaterial(this.device, this, shader, texFetcher, isMapBlock);
+    public buildMaterial(shader: Shader, texFetcher: TextureFetcher, isMapBlock: boolean, useVtxBlends: boolean): SFAMaterial {
+        return new StandardMaterial(this.device, this, shader, texFetcher, isMapBlock, useVtxBlends);
     }
     
     public buildWaterMaterial(shader: Shader, texFetcher: TextureFetcher, isMapBlock: boolean): SFAMaterial {

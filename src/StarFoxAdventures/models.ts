@@ -828,7 +828,7 @@ export class Model {
 
             const vtxArrays = getVtxArrays(posBuffer);
 
-            const newShape = new ShapeGeometry(vtxArrays, vcd, vat, displayList, self.hasFineSkinning);
+            const newShape = new ShapeGeometry(vtxArrays, vcd, vat, displayList, self.hasFineSkinning, self.hasFineSkinning);
             newShape.setPnMatrixMap(pnMatrixMap, self.hasFineSkinning);
 
             const newMat = new CommonShapeMaterial();
@@ -852,7 +852,7 @@ export class Model {
             function setShader(num: number) {
                 curShader = shaders[num];
                 if (self.materials[num] === undefined) {
-                    self.materials[num] = self.materialFactory.buildMaterial(curShader, texFetcher, fields.isMapBlock);
+                    self.materials[num] = self.materialFactory.buildMaterial(curShader, texFetcher, fields.isMapBlock, self.hasFineSkinning);
                 }
                 curMaterial = self.materials[num];
             }
@@ -889,7 +889,7 @@ export class Model {
                         } else {
                             const vtxArrays = getVtxArrays(posBuffer);
 
-                            const newShape = new ShapeGeometry(vtxArrays, vcd, vat, displayList, self.hasFineSkinning);
+                            const newShape = new ShapeGeometry(vtxArrays, vcd, vat, displayList, self.hasFineSkinning, self.hasFineSkinning);
                             newShape.setPnMatrixMap(pnMatrixMap, self.hasFineSkinning);
 
                             const newMat = new CommonShapeMaterial();

@@ -61,13 +61,26 @@ export class PacketParams {
     }
 }
 
+// TODO: use a float texture instead
+export const NUM_BLEND_MATRICES = 60;
+export class VtxBlendParams {
+    public u_BlendMtx: mat4[] = nArray(NUM_BLEND_MATRICES, () => mat4.create());
+
+    public clear(): void {
+        for (let i = 0; i < NUM_BLEND_MATRICES; i++)
+            mat4.identity(this.u_BlendMtx[i]);
+    }
+}
+
 export const ub_SceneParams = 0;
 export const ub_MaterialParams = 1;
 export const ub_PacketParams = 2;
+export const ub_VtxBlendParams = 3;
 
 export const ub_SceneParamsBufferSize = 4*4 + 4;
 export const ub_MaterialParamsBufferSize = 4*2 + 4*2 + 4*4 + 4*4 + 4*3*10 + 4*8 + 4*2*3 + 4*3*20 + 4*5*8;
 export const ub_PacketParamsBufferSize = 4*3*10;
+export const ub_VtxBlendParamsBufferSize = 4*3*NUM_BLEND_MATRICES;
 
 export function fillSceneParamsData(d: Float32Array, bOffs: number, sceneParams: SceneParams): void {
     let offs = bOffs;
@@ -132,6 +145,16 @@ export function fillPacketParamsData(d: Float32Array, bOffs: number, packetParam
         offs += fillMatrix4x3(d, offs, packetParams.u_PosMtx[i]);
 
     assert(offs === bOffs + ub_PacketParamsBufferSize);
+    assert(d.length >= offs);
+}
+
+export function fillVtxBlendParamsData(d: Float32Array, bOffs: number, vtxBlendParams: VtxBlendParams): void {
+    let offs = bOffs;
+
+    for (let i = 0; i < NUM_BLEND_MATRICES; i++)
+        offs += fillMatrix4x3(d, offs, vtxBlendParams.u_BlendMtx[i]);
+
+    assert(offs === bOffs + ub_VtxBlendParamsBufferSize);
     assert(d.length >= offs);
 }
 
@@ -477,6 +500,7 @@ export class GXShapeHelperGfx {
 
     public setOnRenderInst(renderInst: GfxRenderInst, packet: LoadedVertexPacket | null = null): void {
         renderInst.allocateUniformBuffer(ub_PacketParams, ub_PacketParamsBufferSize);
+        renderInst.allocateUniformBuffer(ub_VtxBlendParams, ub_VtxBlendParamsBufferSize);
         renderInst.setInputLayoutAndState(this.inputLayout, this.inputState);
 
         if (packet === null) {
@@ -495,6 +519,12 @@ export class GXShapeHelperGfx {
         fillPacketParamsData(d, offs, packetParams);
     }
 
+    public fillVtxBlendParams(vtxBlendParams: VtxBlendParams, renderInst: GfxRenderInst): void {
+        let offs = renderInst.getUniformBufferOffset(ub_VtxBlendParams);
+        const d = renderInst.mapUniformBufferF32(ub_VtxBlendParams);
+        fillVtxBlendParamsData(d, offs, vtxBlendParams);
+    }
+
     public destroy(device: GfxDevice): void {
         device.destroyInputState(this.inputState);
         if (this.zeroBuffer !== null)
@@ -503,7 +533,7 @@ export class GXShapeHelperGfx {
 }
 
 export const gxBindingLayouts: GfxBindingLayoutDescriptor[] = [
-    { numUniformBuffers: 3, numSamplers: 8, },
+    { numUniformBuffers: 4, numSamplers: 8, },
 ];
 
 const sceneParams = new SceneParams();

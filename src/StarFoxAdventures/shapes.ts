@@ -2,7 +2,7 @@ import { mat4 } from 'gl-matrix';
 import { nArray } from '../util';
 import { GfxDevice, GfxVertexBufferDescriptor, GfxInputState, GfxInputLayout, GfxBuffer, GfxBufferUsage, GfxIndexBufferDescriptor, GfxBufferFrequencyHint } from '../gfx/platform/GfxPlatform';
 import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexLayout, LoadedVertexData, GX_Array, VtxLoader, VertexAttributeInput, LoadedVertexPacket, compilePartialVtxLoader } from '../gx/gx_displaylist';
-import { PacketParams, MaterialParams, GXMaterialHelperGfx, createInputLayout, ub_PacketParams, ub_PacketParamsBufferSize, fillPacketParamsData, ColorKind } from '../gx/gx_render';
+import { PacketParams, MaterialParams, GXMaterialHelperGfx, createInputLayout, ub_PacketParams, ub_PacketParamsBufferSize, fillPacketParamsData, ColorKind, VtxBlendParams, ub_VtxBlendParams, fillVtxBlendParamsData, ub_VtxBlendParamsBufferSize } from '../gx/gx_render';
 import { GfxRenderInstManager, GfxRenderInst } from "../gfx/render/GfxRenderer";
 import { makeStaticDataBuffer } from '../gfx/helpers/BufferHelpers';
 import { GfxRenderCache } from '../gfx/render/GfxRenderCache';
@@ -85,6 +85,7 @@ class MyShapeHelper {
 
     public setOnRenderInst(renderInst: GfxRenderInst, packet: LoadedVertexPacket | null = null): void {
         renderInst.allocateUniformBuffer(ub_PacketParams, ub_PacketParamsBufferSize);
+        renderInst.allocateUniformBuffer(ub_VtxBlendParams, ub_VtxBlendParamsBufferSize);
         renderInst.setInputLayoutAndState(this.inputLayout, this.inputState);
         if (packet !== null)
             renderInst.drawIndexes(packet.indexCount, packet.indexOffset);
@@ -96,6 +97,12 @@ class MyShapeHelper {
         let offs = renderInst.getUniformBufferOffset(ub_PacketParams);
         const d = renderInst.mapUniformBufferF32(ub_PacketParams);
         fillPacketParamsData(d, offs, packetParams);
+    }
+
+    public fillVtxBlendParams(vtxBlendParams: VtxBlendParams, renderInst: GfxRenderInst): void {
+        let offs = renderInst.getUniformBufferOffset(ub_VtxBlendParams);
+        const d = renderInst.mapUniformBufferF32(ub_VtxBlendParams);
+        fillVtxBlendParamsData(d, offs, vtxBlendParams);
     }
 
     public destroy(device: GfxDevice): void {
@@ -118,6 +125,7 @@ export class ShapeGeometry {
 
     private shapeHelper: MyShapeHelper | null = null;
     private packetParams = new PacketParams();
+    private vtxBlendParams = new VtxBlendParams();
     private scratchMtx = mat4.create();
     private verticesDirty = true;
 
@@ -125,10 +133,9 @@ export class ShapeGeometry {
     private hasFineSkinning = false;
     public hasBetaFineSkinning = false;
 
-    constructor(private vtxArrays: GX_Array[], vcd: GX_VtxDesc[], vat: GX_VtxAttrFmt[][], displayList: ArrayBufferSlice, private isDynamic: boolean) {
-        this.vtxLoader = compileVtxLoaderMultiVat(vat, vcd);
+    constructor(private vtxArrays: GX_Array[], vcd: GX_VtxDesc[], vat: GX_VtxAttrFmt[][], displayList: ArrayBufferSlice, private isDynamic: boolean, useVtxBlends: boolean) {
+        this.vtxLoader = compileVtxLoaderMultiVat(vat, vcd, useVtxBlends);
         this.loadedVertexData = this.vtxLoader.parseDisplayList(displayList);
-        this.vtxLoader = compilePartialVtxLoader(this.vtxLoader, this.loadedVertexData);
         this.reloadVertices();
     }
 
@@ -177,6 +184,7 @@ export class ShapeGeometry {
         }
 
         this.shapeHelper.fillPacketParams(this.packetParams, renderInst);
+        this.shapeHelper.fillVtxBlendParams(this.vtxBlendParams, renderInst);
     }
 }
 
