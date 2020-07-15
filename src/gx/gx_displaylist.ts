@@ -120,6 +120,10 @@ export interface LoadedVertexLayout {
     // Precalculated offsets and formats for each attribute, for convenience filling buffers...
     vertexAttributeOffsets: number[];
     vertexAttributeFormats: GfxFormat[];
+
+    useVtxBlends: boolean;
+    blendIndicesOffset: number;
+    blendWeightsOffset: number;
 }
 
 interface VertexLayout extends LoadedVertexLayout, VtxLoaderDesc {
@@ -557,9 +561,13 @@ export function compileLoadedVertexLayout(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDes
         vertexAttributeFormats[vtxAttrib] = fieldFormat;
     }
 
+    let blendIndicesOffset = 0;
+    let blendWeightsOffset = 0;
     if (useVtxBlends) {
-        allocateVertexInput(VertexAttributeInput.BLENDINDICES, GfxFormat.F32_RGBA); // TODO: use integer format?
-        allocateVertexInput(VertexAttributeInput.BLENDWEIGHTS, GfxFormat.F32_RGBA);
+        let input = allocateVertexInput(VertexAttributeInput.BLENDINDICES, GfxFormat.F32_RGBA); // TODO: use integer format?
+        blendIndicesOffset = input.bufferOffset;
+        input = allocateVertexInput(VertexAttributeInput.BLENDWEIGHTS, GfxFormat.F32_RGBA);
+        blendWeightsOffset = input.bufferOffset;
     }
 
     // Align the whole thing to our minimum required alignment (F32).
@@ -568,7 +576,7 @@ export function compileLoadedVertexLayout(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDes
 
     const indexFormat = GfxFormat.U16_R;
 
-    return { indexFormat, vertexBufferStrides, singleVertexInputLayouts, vertexAttributeOffsets, vertexAttributeFormats, vatLayouts, vat, vcd, useVtxBlends };
+    return { indexFormat, vertexBufferStrides, singleVertexInputLayouts, vertexAttributeOffsets, vertexAttributeFormats, vatLayouts, vat, vcd, useVtxBlends, blendIndicesOffset, blendWeightsOffset };
 }
 //#endregion
 
@@ -579,6 +587,12 @@ type SingleVatLoaderFunc = (dst: LoadedVertexData, loadedVertexLayout: LoadedVer
 function generateRunVertices(loadedVertexLayout: LoadedVertexLayout, vatLayout: VatLayout): string {
     function compileVtxArrayViewName(vtxAttrib: GX.Attr): string {
         return `vtxArrayViews[${vtxAttrib}]`;
+    }
+
+    function compileWriteOneComponentF32(offs: number, value: string): string {
+        const littleEndian = (getSystemEndianness() === Endianness.LITTLE_ENDIAN);
+        const dstOffs = `dstVertexDataOffs + ${offs}`;
+        return `dstVertexDataView.setFloat32(${dstOffs}, ${value}, ${littleEndian})`;
     }
 
     // Loads a single vertex layout.
@@ -626,12 +640,6 @@ function generateRunVertices(loadedVertexLayout: LoadedVertexLayout, vatLayout: 
             default:
                 throw "whoops";
             }
-        }
-
-        function compileWriteOneComponentF32(offs: number, value: string): string {
-            const littleEndian = (getSystemEndianness() === Endianness.LITTLE_ENDIAN);
-            const dstOffs = `dstVertexDataOffs + ${offs}`;
-            return `dstVertexDataView.setFloat32(${dstOffs}, ${value}, ${littleEndian})`;
         }
 
         function compileWriteOneComponentU8Norm(offs: number, value: string): string {
@@ -793,7 +801,30 @@ function generateRunVertices(loadedVertexLayout: LoadedVertexLayout, vatLayout: 
         return S;
     }
 
-    return compileVatLayout(vatLayout);
+    let result = compileVatLayout(vatLayout);
+
+    if (loadedVertexLayout.useVtxBlends) {
+        // TODO: Insert correct blend values
+        let dstOffs = loadedVertexLayout.blendIndicesOffset;
+        result += `
+    // BLENDINDICES
+    ${compileWriteOneComponentF32(dstOffs + 0, `0.0`)};
+    ${compileWriteOneComponentF32(dstOffs + 4, `0.0`)};
+    ${compileWriteOneComponentF32(dstOffs + 8, `0.0`)};
+    ${compileWriteOneComponentF32(dstOffs + 12, `0.0`)};
+`;
+
+        dstOffs = loadedVertexLayout.blendWeightsOffset;
+        result += `
+    // BLENDWEIGHTS
+    ${compileWriteOneComponentF32(dstOffs + 0, `1.0`)};
+    ${compileWriteOneComponentF32(dstOffs + 4, `0.0`)};
+    ${compileWriteOneComponentF32(dstOffs + 8, `0.0`)};
+    ${compileWriteOneComponentF32(dstOffs + 12, `0.0`)};
+`;
+    }
+
+    return result;
 }
 
 function compileFunction<T extends Function>(source: string, entryPoint: string): T {
@@ -806,6 +837,9 @@ return function() {
     return ${entryPoint};
 }();
 `;
+
+    console.log(`compiling function:`);
+    console.log(`${fullSource}`);
 
     const generator = new Function(fullSource);
     const func = generator() as T;

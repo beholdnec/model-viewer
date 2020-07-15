@@ -184,6 +184,14 @@ export class ShapeGeometry {
         }
 
         this.shapeHelper.fillPacketParams(this.packetParams, renderInst);
+
+        // TODO: implement sending bone matrices to shader
+        for (let i = 0; i < this.vtxBlendParams.u_BlendMtx.length; i++) {
+            mat4.identity(this.scratchMtx);
+            mat4.mul(this.scratchMtx, config.matrix, this.scratchMtx);
+            this.computeModelView(this.vtxBlendParams.u_BlendMtx[i], config.camera, this.scratchMtx);
+        }
+
         this.shapeHelper.fillVtxBlendParams(this.vtxBlendParams, renderInst);
     }
 }

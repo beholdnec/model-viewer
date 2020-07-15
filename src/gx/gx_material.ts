@@ -504,7 +504,7 @@ ${this.generateLightAttnFn(chan, lightName)}
 
     private generateMulPntMatrixBlended(src: string, funcName: string = `Mul`): string {
         // TODO
-        return `${src}.xyz /* blended */`;
+        return `${funcName}(GetPosVtxBlendMatrix(), ${src})`;
     }
 
     // Output is a vec3, src is a vec4.
@@ -1247,6 +1247,17 @@ ${this.generateTexCoordVaryings()}
 ${both}
 ${this.generateVertAttributeDefs()}
 
+Mat4x3 GetVtxBlendMatrix(uint idx) {
+    return u_VtxBlendMtx[idx];
+}
+
+Mat4x3 GetPosVtxBlendMatrix() {
+    // TODO: configurable matrix count? 2-4?
+    return
+        a_BlendWeights.x * GetVtxBlendMatrix(uint(a_BlendIndices.x)) +
+        a_BlendWeights.y * GetVtxBlendMatrix(uint(a_BlendIndices.y));
+}
+
 Mat4x3 GetPosTexMatrix(float t_MtxIdxFloat) {
     uint t_MtxIdx = uint(t_MtxIdxFloat / 3.0);
     if (t_MtxIdx == 20u)
@@ -1330,8 +1341,10 @@ ${this.generateFog()}
     gl_FragColor = t_PixelOut;
 }`;
 
-        console.log(`generated vertex shader: `);
-        console.log(`${this.vert}`);
+        if (this.material.useVtxBlends) {
+            console.log(`generated vertex shader: `);
+            console.log(`${this.vert}`);
+        }
     }
 }
 // #endregion
