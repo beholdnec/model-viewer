@@ -351,12 +351,13 @@ class WorldRenderer extends SFARenderer {
         }
     }
 
+    private scratchMtx = mat4.create();
+
     private setupLights(lights: GX_Material.Light[], modelCtx: ModelRenderContext) {
         let i = 0;
 
         if (this.enableLights) {
-            const worldView = mat4.create();
-            computeViewMatrix(worldView, modelCtx.viewerInput.camera);
+            computeViewMatrix(this.scratchMtx, modelCtx.viewerInput.camera);
     
             // const ctx = getDebugOverlayCanvas2D();
             for (let light of this.world.lights) {
@@ -364,7 +365,7 @@ class WorldRenderer extends SFARenderer {
     
                 lights[i].reset();
                 // Light information is specified in view space.
-                vec3.transformMat4(lights[i].Position, light.position, worldView);
+                vec3.transformMat4(lights[i].Position, light.position, this.scratchMtx);
                 // drawWorldSpacePoint(ctx, modelCtx.viewerInput.camera.clipFromWorldMatrix, light.position);
                 // TODO: use correct parameters
                 colorCopy(lights[i].Color, light.color);
