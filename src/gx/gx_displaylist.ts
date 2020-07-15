@@ -857,9 +857,6 @@ return function() {
 }();
 `;
 
-    console.log(`compiling function:`);
-    console.log(`${fullSource}`);
-
     const generator = new Function(fullSource);
     const func = generator() as T;
     return func; 

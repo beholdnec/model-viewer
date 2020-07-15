@@ -1341,11 +1341,6 @@ ${this.generateAlphaTest()}
 ${this.generateFog()}
     gl_FragColor = t_PixelOut;
 }`;
-
-        if (this.material.useVtxBlends) {
-            console.log(`generated vertex shader: `);
-            console.log(`${this.vert}`);
-        }
     }
 }
 // #endregion

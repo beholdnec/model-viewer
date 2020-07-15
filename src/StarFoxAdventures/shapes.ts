@@ -27,6 +27,12 @@ export interface VertexBlendingPiece {
     weights: ArrayLike<vec4>;
 }
 
+interface BlendMtxSlot {
+    slotNum: number;
+    boneNum: number;
+    invertBind: boolean;
+}
+
 // The vertices and polygons of a shape.
 export class ShapeGeometry {
     private vtxLoader: VtxLoader;
@@ -39,6 +45,8 @@ export class ShapeGeometry {
     private scratchMtx = mat4.create();
 
     private pnMatrixMap: number[];
+
+    private blendMtxSlots: BlendMtxSlot[] = [];
 
     constructor(private vtxArrays: GX_Array[], vcd: GX_VtxDesc[], vat: GX_VtxAttrFmt[][], displayList: ArrayBufferSlice, private useVtxBlends: boolean, pnMatrixMap: number[], private vertexBlendingPieces: VertexBlendingPiece[] = [], private invBindMatrices: mat4[] = []) {
         this.pnMatrixMap = [];
@@ -53,8 +61,19 @@ export class ShapeGeometry {
         return this.vertexBlendingPieces.find((piece) => posidx >= piece.start && posidx < piece.start + piece.count);
     }
 
-    private getMatrixPaletteIndexForBone(boneNum: number, jointLocal: boolean) {
-        return boneNum + (jointLocal ? this.invBindMatrices.length : 0);
+    private getMatrixPaletteIndexForBone(boneNum: number, invertBind: boolean) {
+        const slot = this.blendMtxSlots.find((slot) => slot.boneNum === boneNum && slot.invertBind === invertBind);
+        if (slot !== undefined) {
+            return slot.slotNum;
+        } else {
+            const newSlot: BlendMtxSlot = {
+                slotNum: this.blendMtxSlots.length,
+                boneNum,
+                invertBind,
+            };
+            this.blendMtxSlots.push(newSlot);
+            return newSlot.slotNum;
+        }
     }
 
     private vtxBlendInfo: VtxBlendInfo = {
@@ -63,8 +82,8 @@ export class ShapeGeometry {
                 // Use position index to find blend params
                 const piece = this.findVertexBlendingPiece(posidx);
                 if (piece !== undefined) {
-                    indices[0] = this.getMatrixPaletteIndexForBone(piece.indices[0], false);
-                    indices[1] = this.getMatrixPaletteIndexForBone(piece.indices[1], false);
+                    indices[0] = this.getMatrixPaletteIndexForBone(piece.indices[0], true);
+                    indices[1] = this.getMatrixPaletteIndexForBone(piece.indices[1], true);
                     indices[2] = 0;
                     indices[3] = 0;
                     weights[0] = piece.weights[posidx - piece.start][0];
@@ -76,7 +95,7 @@ export class ShapeGeometry {
             }
 
             // Use PNMTXIDX to find blend params
-            indices[0] = this.getMatrixPaletteIndexForBone(this.pnMatrixMap[pnmtxidx], true);
+            indices[0] = this.getMatrixPaletteIndexForBone(this.pnMatrixMap[pnmtxidx], false);
             indices[1] = 0;
             indices[2] = 0;
             indices[3] = 0;
@@ -127,22 +146,11 @@ export class ShapeGeometry {
 
         this.computeModelView(this.vtxBlendParams.u_ModelView, config.camera, config.matrix);
 
-        // u_BlendMtx[0..numJoints-1]: transforms bind -> joint-local -> posed -> view. Used for vertices that are blended between 2 bones.
-        for (let i = 0; i < this.invBindMatrices.length; i++) {
-            // mat4.copy(this.scratchMtx, config.boneMatrices[i]);
-            // FIXME: restore correct behavior for beta models with fine-skinning (no joint-local optimization)
-            //if (!this.hasBetaFineSkinning)
-                mat4.mul(this.vtxBlendParams.u_BlendMtx[i], config.boneMatrices[i], this.invBindMatrices[i]);
-            // mat4.mul(this.scratchMtx, config.matrix, this.scratchMtx);
-            // this.computeModelView(this.vtxBlendParams.u_BlendMtx[i], config.camera, this.scratchMtx);
-        }
-
-        // u_BlendMtx[numJoints..2*numJoints-1]: transforms joint-local -> posed -> view. Used for vertices that are attached to 1 bone.
-        // As an optimization, vertices on 1 bone are stored in joint-local space.
-        for (let i = 0; i < this.invBindMatrices.length; i++) {
-            mat4.copy(this.vtxBlendParams.u_BlendMtx[this.invBindMatrices.length + i], config.boneMatrices[i]);
-            // mat4.mul(this.scratchMtx, config.matrix, this.scratchMtx);
-            // this.computeModelView(this.vtxBlendParams.u_BlendMtx[this.invBindMatrices.length + i], config.camera, this.scratchMtx);
+        for (let i = 0; i < this.blendMtxSlots.length; i++) {
+            const slot = this.blendMtxSlots[i];
+            mat4.copy(this.vtxBlendParams.u_BlendMtx[i], config.boneMatrices[slot.boneNum]);
+            if (slot.invertBind)
+                mat4.mul(this.vtxBlendParams.u_BlendMtx[i], this.vtxBlendParams.u_BlendMtx[i], this.invBindMatrices[slot.boneNum]);
         }
 
         this.shapeHelper.fillVtxBlendParams(this.vtxBlendParams, renderInst);
