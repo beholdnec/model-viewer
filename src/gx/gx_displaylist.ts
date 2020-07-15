@@ -582,8 +582,7 @@ export function compileLoadedVertexLayout(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDes
 
 //#region Vertex Loader JIT
 export interface VtxBlendInfo {
-    getIndices: (pnmtxidx?: number, posidx?: number) => ArrayLike<number>; // vec4
-    getWeights: (pnmtxidx?: number, posidx?: number) => ArrayLike<number>; // vec4
+    getBlendParams(indices: Array<number>, weights: Array<number>, pnmtxidx?: number, posidx?: number): void;
 }
 
 type SingleVtxLoaderFunc = (dstVertexDataView: DataView, dstVertexDataOffs: number, dlView: DataView, dlOffs: number, vtxArrayViews: DataView[], vtxArrayStrides: number[], vtxBlendInfo?: VtxBlendInfo) => number;
@@ -823,8 +822,11 @@ function generateRunVertices(loadedVertexLayout: LoadedVertexLayout, vatLayout: 
     if (loadedVertexLayout.useVtxBlends) {
         let dstOffs = loadedVertexLayout.blendIndicesOffset;
         result += `
+    const blendIndices = [0, 0, 0, 0];
+    const blendWeights = [1, 0, 0, 0];
+    vtxBlendInfo.getBlendParams(blendIndices, blendWeights, (pnmtxidx/3)|0, idx${GX.Attr.POS});
+
     // BLENDINDICES
-    const blendIndices = vtxBlendInfo.getIndices((pnmtxidx/3)|0, idx${GX.Attr.POS});
     ${compileWriteOneComponentF32(dstOffs + 0, `blendIndices[0]`)};
     ${compileWriteOneComponentF32(dstOffs + 4, `blendIndices[1]`)};
     ${compileWriteOneComponentF32(dstOffs + 8, `blendIndices[2]`)};
@@ -834,7 +836,6 @@ function generateRunVertices(loadedVertexLayout: LoadedVertexLayout, vatLayout: 
         dstOffs = loadedVertexLayout.blendWeightsOffset;
         result += `
     // BLENDWEIGHTS
-    const blendWeights = vtxBlendInfo.getWeights((pnmtxidx/3)|0, idx${GX.Attr.POS});
     ${compileWriteOneComponentF32(dstOffs + 0, `blendWeights[0]`)};
     ${compileWriteOneComponentF32(dstOffs + 4, `blendWeights[1]`)};
     ${compileWriteOneComponentF32(dstOffs + 8, `blendWeights[2]`)};

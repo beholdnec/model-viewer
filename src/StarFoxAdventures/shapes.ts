@@ -159,27 +159,37 @@ export class ShapeGeometry {
         return undefined;
     }
 
+    private getMatrixPaletteIndexForBone(boneNum: number, jointLocal: boolean) {
+        return boneNum + (jointLocal ? this.invBindMatrices.length : 0);
+    }
+
     private vtxBlendInfo: VtxBlendInfo = {
-        getIndices: (pnmtxidx: number = 0, posidx?: number) => {
+        getBlendParams: (indices: Array<number>, weights: Array<number>, pnmtxidx: number = 0, posidx?: number) => {
             if (posidx !== undefined) {
+                // Use position index to find blend params
                 const piece = this.findVertexBlendingPiece(posidx);
                 if (piece !== undefined) {
-                    return piece.indices;
+                    indices[0] = this.getMatrixPaletteIndexForBone(piece.indices[0], false);
+                    indices[1] = this.getMatrixPaletteIndexForBone(piece.indices[1], false);
+                    indices[2] = 0;
+                    indices[3] = 0;
+                    weights[0] = piece.weights[posidx - piece.start][0];
+                    weights[1] = piece.weights[posidx - piece.start][1];
+                    weights[2] = 0;
+                    weights[3] = 0;
+                    return;
                 }
             }
 
-            // Use matrix without inv bind included
-            return vec4.fromValues(this.invBindMatrices.length + this.pnMatrixMap[pnmtxidx], 0, 0, 0);
-        },
-        getWeights: (pnmtxidx: number = 0, posidx?: number) => {
-            if (posidx !== undefined) {
-                const piece = this.findVertexBlendingPiece(posidx);
-                if (piece !== undefined) {
-                    return piece.weights[posidx - piece.start];
-                }
-            }
-
-            return vec4.fromValues(1, 0, 0, 0);
+            // Use PNMTXIDX to find blend params
+            indices[0] = this.getMatrixPaletteIndexForBone(this.pnMatrixMap[pnmtxidx], true);
+            indices[1] = 0;
+            indices[2] = 0;
+            indices[3] = 0;
+            weights[0] = 1;
+            weights[1] = 0;
+            weights[2] = 0;
+            weights[3] = 0;
         },
     }
 
@@ -229,7 +239,7 @@ export class ShapeGeometry {
 
 
         // u_BlendMtx[0..numJoints-1]: transforms bind -> joint-local -> posed -> view. Used for vertices that are blended between 2 bones.
-        for (let i = 0; i < this.vtxBlendParams.u_BlendMtx.length && i < config.boneMatrices.length && i < this.invBindMatrices.length; i++) {
+        for (let i = 0; i < this.invBindMatrices.length; i++) {
             mat4.copy(this.scratchMtx, config.boneMatrices[i]);
             // FIXME: restore correct behavior for beta models with fine-skinning (no joint-local optimization)
             //if (!this.hasBetaFineSkinning)
