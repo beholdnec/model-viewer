@@ -1,7 +1,6 @@
 import { mat4, vec4 } from 'gl-matrix';
-import { nArray } from '../util';
 import { GfxDevice, GfxVertexBufferDescriptor, GfxInputState, GfxInputLayout, GfxBuffer, GfxBufferUsage, GfxIndexBufferDescriptor, GfxBufferFrequencyHint } from '../gfx/platform/GfxPlatform';
-import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexLayout, LoadedVertexData, GX_Array, VtxLoader, VertexAttributeInput, LoadedVertexPacket, compilePartialVtxLoader, VtxBlendInfo } from '../gx/gx_displaylist';
+import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexLayout, LoadedVertexData, GX_Array, VtxLoader, VertexAttributeInput, LoadedVertexPacket, VtxBlendInfo } from '../gx/gx_displaylist';
 import { PacketParams, MaterialParams, GXMaterialHelperGfx, createInputLayout, ub_PacketParams, ub_PacketParamsBufferSize, fillPacketParamsData, ColorKind, VtxBlendParams, ub_VtxBlendParams, fillVtxBlendParamsData, ub_VtxBlendParamsBufferSize } from '../gx/gx_render';
 import { GfxRenderInstManager, GfxRenderInst } from "../gfx/render/GfxRenderer";
 import { makeStaticDataBuffer } from '../gfx/helpers/BufferHelpers';
@@ -14,7 +13,6 @@ import { colorNewFromRGBA, colorCopy, White } from '../Color';
 import { SFAMaterial } from './materials';
 import { ModelRenderContext } from './models';
 import { ViewState, computeModelView } from './util';
-import { fillVec4 } from '../gfx/helpers/UniformBufferHelpers';
 
 class MyShapeHelper {
     public inputState: GfxInputState;
@@ -135,7 +133,6 @@ export class ShapeGeometry {
     private packetParams = new PacketParams();
     private vtxBlendParams = new VtxBlendParams();
     private scratchMtx = mat4.create();
-    private verticesDirty = true;
 
     private pnMatrixMap: number[];
 
@@ -143,20 +140,13 @@ export class ShapeGeometry {
         this.pnMatrixMap = [];
         for (let i = 0; i < pnMatrixMap.length; i++)
             this.pnMatrixMap.push(pnMatrixMap[i]);
+
         this.vtxLoader = compileVtxLoaderMultiVat(vat, vcd, useVtxBlends);
-        this.loadedVertexData = this.vtxLoader.parseDisplayList(displayList);
-        this.reloadVertices();
+        this.loadedVertexData = this.vtxLoader.runVertices(this.vtxArrays, displayList, undefined, this.useVtxBlends ? this.vtxBlendInfo : undefined);
     }
 
     private findVertexBlendingPiece(posidx: number): VertexBlendingPiece | undefined {
-        for (let i = 0; i < this.vertexBlendingPieces.length; i++) {
-            const piece = this.vertexBlendingPieces[i];
-            if (posidx >= piece.start && posidx < piece.start + piece.count) {
-                return piece;
-            }
-        }
-
-        return undefined;
+        return this.vertexBlendingPieces.find((piece) => posidx >= piece.start && posidx < piece.start + piece.count);
     }
 
     private getMatrixPaletteIndexForBone(boneNum: number, jointLocal: boolean) {
@@ -193,11 +183,6 @@ export class ShapeGeometry {
         },
     }
 
-    public reloadVertices() {
-        this.vtxLoader.loadVertexData(this.loadedVertexData, this.vtxArrays, this.useVtxBlends ? this.vtxBlendInfo : undefined);
-        this.verticesDirty = true;
-    }
-
     // Warning: Pieces are referenced, not copied.
     public setVertexBlendingPieces(pieces: VertexBlendingPiece[]) {
         this.vertexBlendingPieces = pieces;
@@ -212,10 +197,6 @@ export class ShapeGeometry {
         if (this.shapeHelper === null) {
             this.shapeHelper = new MyShapeHelper(device, renderInstManager.gfxRenderCache,
                 this.vtxLoader.loadedVertexLayout, this.loadedVertexData, false, false);
-            this.verticesDirty = false;
-        } else if (this.verticesDirty) {
-            this.shapeHelper.uploadData(device, true, false);
-            this.verticesDirty = false;
         }
 
         this.shapeHelper.setOnRenderInst(renderInst);
@@ -338,10 +319,6 @@ export class CommonShapeMaterial implements ShapeMaterial {
 // The geometry and material of a shape.
 export class Shape {
     public constructor(public geom: ShapeGeometry, public material: ShapeMaterial, public isDevGeometry: boolean) {
-    }
-
-    public reloadVertices() {
-        this.geom.reloadVertices();
     }
 
     public setOnRenderInst(device: GfxDevice, renderInstManager: GfxRenderInstManager, renderInst: GfxRenderInst, modelMatrix: mat4, modelCtx: ModelRenderContext, boneMatrices: mat4[]) {

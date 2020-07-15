@@ -1,11 +1,9 @@
-import * as Viewer from '../viewer';
 import { nArray } from '../util';
 import { mat4, vec3, vec4 } from 'gl-matrix';
 import { GX_VtxDesc, GX_VtxAttrFmt, GX_Array } from '../gx/gx_displaylist';
 import { GfxDevice } from '../gfx/platform/GfxPlatform';
 import ArrayBufferSlice from '../ArrayBufferSlice';
 import { GfxRenderInstManager } from "../gfx/render/GfxRenderer";
-import { ColorTexture } from '../gfx/helpers/RenderTargetHelpers';
 import { DataFetcher } from '../DataFetcher';
 import * as GX from '../gx/gx_enum';
 import * as GX_Material from '../gx/gx_material';
@@ -121,16 +119,6 @@ class ModelShapes {
     public waters: Water[] = [];
 
     constructor(public model: Model, public posBuffer: DataView) {
-    }
-
-    public reloadVertices() {
-        // TODO: reload waters and furs
-        for (let i = 0; i < this.shapes.length; i++) {
-            const shapes = this.shapes[i];
-            for (let j = 0; j < shapes.length; j++) {
-                shapes[j].reloadVertices();
-            }
-        }
     }
 
     public getNumDrawSteps() {
@@ -1128,72 +1116,7 @@ export class ModelInstance implements BlockRenderer {
             mat4.add(boneMtx, this.scratch0, this.scratch1);
         }
 
-        // this.performFineSkinning();
-
         this.skeletonDirty = false;
-    }
-
-    private performFineSkinning() {
-        if (!this.model.hasFineSkinning) {
-            return;
-        }
-
-        if (this.model.posFineSkinningPieces.length === 0) {
-            return;
-        }
-
-        const boneMtx0 = mat4.create();
-        const boneMtx1 = mat4.create();
-        const pos = vec3.create();
-
-        // The original game performs fine skinning on the CPU.
-        // A more appropriate place for these calculations might be in a vertex shader.
-        const quant = 1 << this.model.posFineSkinningConfig!.quantizeScale;
-        const dequant = 1 / quant;
-        for (let i = 0; i < this.model.posFineSkinningPieces.length; i++) {
-            const piece = this.model.posFineSkinningPieces[i];
-
-            mat4.copy(boneMtx0, this.boneMatrices[piece.bone0]);
-            if (!this.model.hasBetaFineSkinning) {
-                mat4.mul(boneMtx0, boneMtx0, this.model.invBindMatrices[piece.bone0]);
-            }
-            mat4.copy(boneMtx1, this.boneMatrices[piece.bone1]);
-            if (!this.model.hasBetaFineSkinning) {
-                mat4.mul(boneMtx1, boneMtx1, this.model.invBindMatrices[piece.bone1]);
-            }
-
-            const src = dataSubarray(this.model.originalPosBuffer, piece.skinDataSrcOffs, 32 * piece.skinSrcBlockCount);
-            const dst = dataSubarray(this.modelShapes.posBuffer, piece.skinDataSrcOffs, 32 * piece.skinSrcBlockCount);
-            const weights = dataSubarray(this.model.posFineSkinningWeights!, piece.weightsSrc, 32 * piece.weightsBlockCount);
-            let srcOffs = piece.skinMeOffset;
-            let dstOffs = piece.skinMeOffset;
-            let weightOffs = 0;
-            for (let j = 0; j < piece.numVertices; j++) {
-                pos[0] = src.getInt16(srcOffs) * dequant;
-                pos[1] = src.getInt16(srcOffs + 2) * dequant;
-                pos[2] = src.getInt16(srcOffs + 4) * dequant;
-
-                const weight0 = weights.getUint8(weightOffs) / 128;
-                const weight1 = weights.getUint8(weightOffs + 1) / 128;
-                mat4.copy(this.scratch0, boneMtx0);
-                mat4.multiplyScalar(this.scratch0, this.scratch0, weight0);
-                mat4.copy(this.scratch1, boneMtx1);
-                mat4.multiplyScalar(this.scratch1, this.scratch1, weight1);
-                mat4.add(this.scratch0, this.scratch0, this.scratch1);
-                vec3.transformMat4(pos, pos, this.scratch0);
-
-                dst.setInt16(dstOffs, pos[0] * quant);
-                dst.setInt16(dstOffs + 2, pos[1] * quant);
-                dst.setInt16(dstOffs + 4, pos[2] * quant);
-
-                srcOffs += 6;
-                dstOffs += 6;
-                weightOffs += 2;
-            }
-        }
-
-        // Rerun all display lists
-        this.modelShapes.reloadVertices();
     }
 }
 
