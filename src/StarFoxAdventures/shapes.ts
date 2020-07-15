@@ -1,4 +1,4 @@
-import { mat4 } from 'gl-matrix';
+import { mat4, vec4 } from 'gl-matrix';
 import { nArray } from '../util';
 import { GfxDevice, GfxVertexBufferDescriptor, GfxInputState, GfxInputLayout, GfxBuffer, GfxBufferUsage, GfxIndexBufferDescriptor, GfxBufferFrequencyHint } from '../gfx/platform/GfxPlatform';
 import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexLayout, LoadedVertexData, GX_Array, VtxLoader, VertexAttributeInput, LoadedVertexPacket, compilePartialVtxLoader } from '../gx/gx_displaylist';
@@ -14,6 +14,7 @@ import { colorNewFromRGBA, colorCopy, White } from '../Color';
 import { SFAMaterial } from './materials';
 import { ModelRenderContext } from './models';
 import { ViewState, computeModelView } from './util';
+import { fillVec4 } from '../gfx/helpers/UniformBufferHelpers';
 
 class MyShapeHelper {
     public inputState: GfxInputState;
@@ -140,7 +141,14 @@ export class ShapeGeometry {
     }
 
     public reloadVertices() {
-        this.vtxLoader.loadVertexData(this.loadedVertexData, this.vtxArrays);
+        this.vtxLoader.loadVertexData(this.loadedVertexData, this.vtxArrays, {
+            getIndices: (pnmtxidx: number = 0) => {
+                return vec4.fromValues(this.pnMatrixMap[pnmtxidx], 0, 0, 0);
+            },
+            getWeights: () => {
+                return vec4.fromValues(1, 0, 0, 0);
+            },
+        });
         this.verticesDirty = true;
     }
 
@@ -186,8 +194,8 @@ export class ShapeGeometry {
         this.shapeHelper.fillPacketParams(this.packetParams, renderInst);
 
         // TODO: implement sending bone matrices to shader
-        for (let i = 0; i < this.vtxBlendParams.u_BlendMtx.length; i++) {
-            mat4.identity(this.scratchMtx);
+        for (let i = 0; i < this.vtxBlendParams.u_BlendMtx.length && i < config.boneMatrices.length; i++) {
+            mat4.copy(this.scratchMtx, config.boneMatrices[i]);
             mat4.mul(this.scratchMtx, config.matrix, this.scratchMtx);
             this.computeModelView(this.vtxBlendParams.u_BlendMtx[i], config.camera, this.scratchMtx);
         }
