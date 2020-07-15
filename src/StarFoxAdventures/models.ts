@@ -1,6 +1,6 @@
 import * as Viewer from '../viewer';
 import { nArray } from '../util';
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4, vec3, vec4 } from 'gl-matrix';
 import { GX_VtxDesc, GX_VtxAttrFmt, GX_Array } from '../gx/gx_displaylist';
 import { GfxDevice } from '../gfx/platform/GfxPlatform';
 import ArrayBufferSlice from '../ArrayBufferSlice';
@@ -18,7 +18,7 @@ import { LowBitReader, dataSubarray, arrayBufferSliceFromDataView, dataCopy, rea
 import { BlockRenderer } from './blocks';
 import { loadRes } from './resource';
 import { TextureFetcher } from './textures';
-import { Shape, ShapeGeometry, CommonShapeMaterial } from './shapes';
+import { Shape, ShapeGeometry, CommonShapeMaterial, VertexBlendingPiece } from './shapes';
 import { SceneRenderContext } from './render';
 
 interface Joint {
@@ -222,6 +222,8 @@ export class Model {
     public posFineSkinningPieces: FineSkinningPiece[] = [];
 
     private nrmFineSkinningConfig: FineSkinningConfig | undefined = undefined;
+
+    private vertexBlendingPieces: VertexBlendingPiece[] = [];
 
     public hasFineSkinning: boolean = false;
     public hasBetaFineSkinning: boolean = false;
@@ -482,6 +484,27 @@ export class Model {
 
             this.nrmFineSkinningConfig = parseFineSkinningConfig(dataSubarray(blockDv, fields.nrmFineSkinningConfig));
             // TODO: implement fine skinning for normals
+
+            // Load fine skinning info
+            for (let i = 0; i < this.posFineSkinningPieces.length; i++) {
+                const piece = this.posFineSkinningPieces[i];
+                const weights = dataSubarray(this.posFineSkinningWeights!, piece.weightsSrc, 32 * piece.weightsBlockCount);
+                const outWeights: vec4[] = [];
+                let weightOffs = 0;
+                for (let j = 0; j < piece.numVertices; j++) {
+                    const weight0 = weights.getUint8(weightOffs) / 128;
+                    const weight1 = weights.getUint8(weightOffs + 1) / 128;
+                    outWeights.push(vec4.fromValues(weight0, weight1, 0, 0));
+                    weightOffs += 2;
+                }
+
+                this.vertexBlendingPieces.push({
+                    start: (piece.skinDataSrcOffs + piece.skinMeOffset) / 6, // Divide by 6 because each position is 6 bytes
+                    count: piece.numVertices,
+                    indices: [piece.bone0, piece.bone1, 0, 0],
+                    weights: outWeights,
+                });
+            }
         }
 
         this.hasFineSkinning = this.posFineSkinningConfig !== undefined && this.posFineSkinningConfig.numPieces !== 0;
@@ -828,8 +851,7 @@ export class Model {
 
             const vtxArrays = getVtxArrays(posBuffer);
 
-            const newShape = new ShapeGeometry(vtxArrays, vcd, vat, displayList, self.hasFineSkinning, self.hasFineSkinning);
-            newShape.setPnMatrixMap(pnMatrixMap, self.hasFineSkinning);
+            const newShape = new ShapeGeometry(vtxArrays, vcd, vat, displayList, self.hasFineSkinning, pnMatrixMap, self.vertexBlendingPieces, self.invBindMatrices);
 
             const newMat = new CommonShapeMaterial();
             newMat.setMaterial(material);
@@ -889,8 +911,7 @@ export class Model {
                         } else {
                             const vtxArrays = getVtxArrays(posBuffer);
 
-                            const newShape = new ShapeGeometry(vtxArrays, vcd, vat, displayList, self.hasFineSkinning, self.hasFineSkinning);
-                            newShape.setPnMatrixMap(pnMatrixMap, self.hasFineSkinning);
+                            const newShape = new ShapeGeometry(vtxArrays, vcd, vat, displayList, self.hasFineSkinning, pnMatrixMap, self.vertexBlendingPieces, self.invBindMatrices);
 
                             const newMat = new CommonShapeMaterial();
                             newMat.setMaterial(curMaterial!);
@@ -1107,7 +1128,7 @@ export class ModelInstance implements BlockRenderer {
             mat4.add(boneMtx, this.scratch0, this.scratch1);
         }
 
-        this.performFineSkinning();
+        // this.performFineSkinning();
 
         this.skeletonDirty = false;
     }

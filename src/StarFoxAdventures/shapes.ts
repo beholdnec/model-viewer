@@ -1,7 +1,7 @@
 import { mat4, vec4 } from 'gl-matrix';
 import { nArray } from '../util';
 import { GfxDevice, GfxVertexBufferDescriptor, GfxInputState, GfxInputLayout, GfxBuffer, GfxBufferUsage, GfxIndexBufferDescriptor, GfxBufferFrequencyHint } from '../gfx/platform/GfxPlatform';
-import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexLayout, LoadedVertexData, GX_Array, VtxLoader, VertexAttributeInput, LoadedVertexPacket, compilePartialVtxLoader } from '../gx/gx_displaylist';
+import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexLayout, LoadedVertexData, GX_Array, VtxLoader, VertexAttributeInput, LoadedVertexPacket, compilePartialVtxLoader, VtxBlendInfo } from '../gx/gx_displaylist';
 import { PacketParams, MaterialParams, GXMaterialHelperGfx, createInputLayout, ub_PacketParams, ub_PacketParamsBufferSize, fillPacketParamsData, ColorKind, VtxBlendParams, ub_VtxBlendParams, fillVtxBlendParamsData, ub_VtxBlendParamsBufferSize } from '../gx/gx_render';
 import { GfxRenderInstManager, GfxRenderInst } from "../gfx/render/GfxRenderer";
 import { makeStaticDataBuffer } from '../gfx/helpers/BufferHelpers';
@@ -119,6 +119,13 @@ interface ShapeConfig {
     camera: Camera;
 }
 
+export interface VertexBlendingPiece {
+    start: number;
+    count: number;
+    indices: vec4;
+    weights: ArrayLike<vec4>;
+}
+
 // The vertices and polygons of a shape.
 export class ShapeGeometry {
     private vtxLoader: VtxLoader;
@@ -130,33 +137,60 @@ export class ShapeGeometry {
     private scratchMtx = mat4.create();
     private verticesDirty = true;
 
-    public pnMatrixMap: number[] = nArray(10, () => 0);
-    private hasFineSkinning = false;
-    public hasBetaFineSkinning = false;
+    private pnMatrixMap: number[];
 
-    constructor(private vtxArrays: GX_Array[], vcd: GX_VtxDesc[], vat: GX_VtxAttrFmt[][], displayList: ArrayBufferSlice, private isDynamic: boolean, useVtxBlends: boolean) {
+    constructor(private vtxArrays: GX_Array[], vcd: GX_VtxDesc[], vat: GX_VtxAttrFmt[][], displayList: ArrayBufferSlice, private useVtxBlends: boolean, pnMatrixMap: number[], private vertexBlendingPieces: VertexBlendingPiece[] = [], private invBindMatrices: mat4[] = []) {
+        this.pnMatrixMap = [];
+        for (let i = 0; i < pnMatrixMap.length; i++)
+            this.pnMatrixMap.push(pnMatrixMap[i]);
         this.vtxLoader = compileVtxLoaderMultiVat(vat, vcd, useVtxBlends);
         this.loadedVertexData = this.vtxLoader.parseDisplayList(displayList);
         this.reloadVertices();
     }
 
+    private findVertexBlendingPiece(posidx: number): VertexBlendingPiece | undefined {
+        for (let i = 0; i < this.vertexBlendingPieces.length; i++) {
+            const piece = this.vertexBlendingPieces[i];
+            if (posidx >= piece.start && posidx < piece.start + piece.count) {
+                return piece;
+            }
+        }
+
+        return undefined;
+    }
+
+    private vtxBlendInfo: VtxBlendInfo = {
+        getIndices: (pnmtxidx: number = 0, posidx?: number) => {
+            if (posidx !== undefined) {
+                const piece = this.findVertexBlendingPiece(posidx);
+                if (piece !== undefined) {
+                    return piece.indices;
+                }
+            }
+
+            // Use matrix without inv bind included
+            return vec4.fromValues(this.invBindMatrices.length + this.pnMatrixMap[pnmtxidx], 0, 0, 0);
+        },
+        getWeights: (pnmtxidx: number = 0, posidx?: number) => {
+            if (posidx !== undefined) {
+                const piece = this.findVertexBlendingPiece(posidx);
+                if (piece !== undefined) {
+                    return piece.weights[posidx - piece.start];
+                }
+            }
+
+            return vec4.fromValues(1, 0, 0, 0);
+        },
+    }
+
     public reloadVertices() {
-        this.vtxLoader.loadVertexData(this.loadedVertexData, this.vtxArrays, {
-            getIndices: (pnmtxidx: number = 0) => {
-                return vec4.fromValues(this.pnMatrixMap[pnmtxidx], 0, 0, 0);
-            },
-            getWeights: () => {
-                return vec4.fromValues(1, 0, 0, 0);
-            },
-        });
+        this.vtxLoader.loadVertexData(this.loadedVertexData, this.vtxArrays, this.useVtxBlends ? this.vtxBlendInfo : undefined);
         this.verticesDirty = true;
     }
 
-    public setPnMatrixMap(pnMatrixMap: number[], hasFineSkinning: boolean) {
-        for (let i = 0; i < pnMatrixMap.length; i++) {
-            this.pnMatrixMap[i] = pnMatrixMap[i];
-        }
-        this.hasFineSkinning = hasFineSkinning;
+    // Warning: Pieces are referenced, not copied.
+    public setVertexBlendingPieces(pieces: VertexBlendingPiece[]) {
+        this.vertexBlendingPieces = pieces;
     }
 
     private computeModelView(dst: mat4, camera: Camera, modelMatrix: mat4): void {
@@ -167,7 +201,7 @@ export class ShapeGeometry {
     public setOnRenderInst(device: GfxDevice, renderInstManager: GfxRenderInstManager, renderInst: GfxRenderInst, config: ShapeConfig) {
         if (this.shapeHelper === null) {
             this.shapeHelper = new MyShapeHelper(device, renderInstManager.gfxRenderCache,
-                this.vtxLoader.loadedVertexLayout, this.loadedVertexData, this.isDynamic, false);
+                this.vtxLoader.loadedVertexLayout, this.loadedVertexData, false, false);
             this.verticesDirty = false;
         } else if (this.verticesDirty) {
             this.shapeHelper.uploadData(device, true, false);
@@ -180,7 +214,7 @@ export class ShapeGeometry {
 
         for (let i = 0; i < this.packetParams.u_PosMtx.length; i++) {
             // PNMTX 9 is used for fine-skinned vertices in models with fine-skinning enabled.
-            if (this.hasFineSkinning && i === 9) {
+            if (this.useVtxBlends && i === 9) {
                 mat4.identity(this.scratchMtx);
             } else {
                 mat4.copy(this.scratchMtx, config.boneMatrices[this.pnMatrixMap[i]]);
@@ -193,11 +227,23 @@ export class ShapeGeometry {
 
         this.shapeHelper.fillPacketParams(this.packetParams, renderInst);
 
-        // TODO: implement sending bone matrices to shader
-        for (let i = 0; i < this.vtxBlendParams.u_BlendMtx.length && i < config.boneMatrices.length; i++) {
+
+        // u_BlendMtx[0..numJoints-1]: transforms bind -> joint-local -> posed -> view. Used for vertices that are blended between 2 bones.
+        for (let i = 0; i < this.vtxBlendParams.u_BlendMtx.length && i < config.boneMatrices.length && i < this.invBindMatrices.length; i++) {
             mat4.copy(this.scratchMtx, config.boneMatrices[i]);
+            // FIXME: restore correct behavior for beta models with fine-skinning (no joint-local optimization)
+            //if (!this.hasBetaFineSkinning)
+                mat4.mul(this.scratchMtx, this.scratchMtx, this.invBindMatrices[i]);
             mat4.mul(this.scratchMtx, config.matrix, this.scratchMtx);
             this.computeModelView(this.vtxBlendParams.u_BlendMtx[i], config.camera, this.scratchMtx);
+        }
+
+        // u_BlendMtx[numJoints..2*numJoints-1]: transforms joint-local -> posed -> view. Used for vertices that are attached to 1 bone.
+        // As an optimization, vertices on 1 bone are stored in joint-local space.
+        for (let i = 0; i < this.invBindMatrices.length; i++) {
+            mat4.copy(this.scratchMtx, config.boneMatrices[i]);
+            mat4.mul(this.scratchMtx, config.matrix, this.scratchMtx);
+            this.computeModelView(this.vtxBlendParams.u_BlendMtx[this.invBindMatrices.length + i], config.camera, this.scratchMtx);
         }
 
         this.shapeHelper.fillVtxBlendParams(this.vtxBlendParams, renderInst);

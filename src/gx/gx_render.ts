@@ -62,7 +62,7 @@ export class PacketParams {
 }
 
 // TODO: use a float texture instead
-export const NUM_BLEND_MATRICES = 60;
+export const NUM_BLEND_MATRICES = 128;
 export class VtxBlendParams {
     public u_BlendMtx: mat4[] = nArray(NUM_BLEND_MATRICES, () => mat4.create());
 
