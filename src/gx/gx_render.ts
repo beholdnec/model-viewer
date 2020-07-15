@@ -64,9 +64,11 @@ export class PacketParams {
 // TODO: use a float texture instead
 export const NUM_BLEND_MATRICES = 128;
 export class VtxBlendParams {
+    public u_ModelView: mat4 = mat4.create();
     public u_BlendMtx: mat4[] = nArray(NUM_BLEND_MATRICES, () => mat4.create());
 
     public clear(): void {
+        mat4.identity(this.u_ModelView);
         for (let i = 0; i < NUM_BLEND_MATRICES; i++)
             mat4.identity(this.u_BlendMtx[i]);
     }
@@ -80,7 +82,7 @@ export const ub_VtxBlendParams = 3;
 export const ub_SceneParamsBufferSize = 4*4 + 4;
 export const ub_MaterialParamsBufferSize = 4*2 + 4*2 + 4*4 + 4*4 + 4*3*10 + 4*8 + 4*2*3 + 4*3*20 + 4*5*8;
 export const ub_PacketParamsBufferSize = 4*3*10;
-export const ub_VtxBlendParamsBufferSize = 4*3*NUM_BLEND_MATRICES;
+export const ub_VtxBlendParamsBufferSize = 4*3 + 4*3*NUM_BLEND_MATRICES;
 
 export function fillSceneParamsData(d: Float32Array, bOffs: number, sceneParams: SceneParams): void {
     let offs = bOffs;
@@ -151,6 +153,7 @@ export function fillPacketParamsData(d: Float32Array, bOffs: number, packetParam
 export function fillVtxBlendParamsData(d: Float32Array, bOffs: number, vtxBlendParams: VtxBlendParams): void {
     let offs = bOffs;
 
+    offs += fillMatrix4x3(d, offs, vtxBlendParams.u_ModelView);
     for (let i = 0; i < NUM_BLEND_MATRICES; i++)
         offs += fillMatrix4x3(d, offs, vtxBlendParams.u_BlendMtx[i]);
 

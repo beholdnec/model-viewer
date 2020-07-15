@@ -336,6 +336,7 @@ layout(row_major, std140) uniform ub_PacketParams {
 };
 
 layout(row_major, std140) uniform ub_VtxBlendParams {
+    Mat4x3 u_ModelView;
     Mat4x3 u_VtxBlendMtx[${NUM_BLEND_MATRICES}];
 };
 
@@ -504,7 +505,7 @@ ${this.generateLightAttnFn(chan, lightName)}
 
     private generateMulPntMatrixBlended(src: string, funcName: string = `Mul`): string {
         // TODO
-        return `${funcName}(GetPosVtxBlendMatrix(), ${src})`;
+        return `Mul(u_ModelView, vec4(${funcName}(GetPosVtxBlendMatrix(), ${src}), 1.0))`;
     }
 
     // Output is a vec3, src is a vec4.

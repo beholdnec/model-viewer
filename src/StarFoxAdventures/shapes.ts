@@ -14,103 +14,6 @@ import { SFAMaterial } from './materials';
 import { ModelRenderContext } from './models';
 import { ViewState, computeModelView } from './util';
 
-// class MyShapeHelper {
-//     public inputState: GfxInputState;
-//     public inputLayout: GfxInputLayout;
-//     private zeroBuffer: GfxBuffer | null = null;
-//     private vertexBuffers: GfxBuffer[] = [];
-//     private indexBuffer: GfxBuffer;
-
-//     constructor(device: GfxDevice, cache: GfxRenderCache, public loadedVertexLayout: LoadedVertexLayout, public loadedVertexData: LoadedVertexData, dynamicVertices: boolean, dynamicIndices: boolean) {
-//         let usesZeroBuffer = false;
-//         for (let attrInput: VertexAttributeInput = 0; attrInput < VertexAttributeInput.COUNT; attrInput++) {
-//             const attrib = loadedVertexLayout.singleVertexInputLayouts.find((attrib) => attrib.attrInput === attrInput);
-//             if (attrib === undefined) {
-//                 usesZeroBuffer = true;
-//                 break;
-//             }
-//         }
-
-//         const buffers: GfxVertexBufferDescriptor[] = [];
-//         for (let i = 0; i < loadedVertexData.vertexBuffers.length; i++) {
-//             const vertexBuffer = device.createBuffer((loadedVertexData.vertexBuffers[i].byteLength + 3) / 4, GfxBufferUsage.VERTEX,
-//                 dynamicVertices ? GfxBufferFrequencyHint.DYNAMIC : GfxBufferFrequencyHint.STATIC);
-//             this.vertexBuffers.push(vertexBuffer);
-
-//             buffers.push({
-//                 buffer: vertexBuffer,
-//                 byteOffset: 0,
-//             });
-//         }
-
-//         if (usesZeroBuffer) {
-//             // TODO(jstpierre): Move this to a global somewhere?
-//             this.zeroBuffer = makeStaticDataBuffer(device, GfxBufferUsage.VERTEX, new Uint8Array(16).buffer);
-//             buffers.push({
-//                 buffer: this.zeroBuffer,
-//                 byteOffset: 0,
-//             });
-//         }
-
-//         this.inputLayout = createInputLayout(device, cache, loadedVertexLayout);
-
-//         this.indexBuffer = device.createBuffer((loadedVertexData.indexData.byteLength + 3) / 4, GfxBufferUsage.INDEX,
-//             dynamicIndices ? GfxBufferFrequencyHint.DYNAMIC : GfxBufferFrequencyHint.STATIC);
-
-//         const indexBufferDesc: GfxIndexBufferDescriptor = {
-//             buffer: this.indexBuffer,
-//             byteOffset: 0,
-//         };
-//         this.inputState = device.createInputState(this.inputLayout, buffers, indexBufferDesc);
-
-//         this.uploadData(device, true, true);
-//     }
-
-//     public uploadData(device: GfxDevice, uploadVertices: boolean, uploadIndices: boolean) {
-//         const hostAccessPass = device.createHostAccessPass();
-
-//         if (uploadVertices) {
-//             for (let i = 0; i < this.loadedVertexData.vertexBuffers.length; i++) {
-//                 hostAccessPass.uploadBufferData(this.vertexBuffers[i], 0, new Uint8Array(this.loadedVertexData.vertexBuffers[i]));
-//             }
-//         }
-
-//         if (uploadIndices) {
-//             hostAccessPass.uploadBufferData(this.indexBuffer, 0, new Uint8Array(this.loadedVertexData.indexData));
-//         }
-
-//         device.submitPass(hostAccessPass);
-//     }
-
-//     public setOnRenderInst(renderInst: GfxRenderInst, packet: LoadedVertexPacket | null = null): void {
-//         renderInst.allocateUniformBuffer(ub_PacketParams, ub_PacketParamsBufferSize);
-//         renderInst.allocateUniformBuffer(ub_VtxBlendParams, ub_VtxBlendParamsBufferSize);
-//         renderInst.setInputLayoutAndState(this.inputLayout, this.inputState);
-//         if (packet !== null)
-//             renderInst.drawIndexes(packet.indexCount, packet.indexOffset);
-//         else
-//             renderInst.drawIndexes(this.loadedVertexData.totalIndexCount);
-//     }
-
-//     public fillPacketParams(packetParams: PacketParams, renderInst: GfxRenderInst): void {
-//         let offs = renderInst.getUniformBufferOffset(ub_PacketParams);
-//         const d = renderInst.mapUniformBufferF32(ub_PacketParams);
-//         fillPacketParamsData(d, offs, packetParams);
-//     }
-
-//     public fillVtxBlendParams(vtxBlendParams: VtxBlendParams, renderInst: GfxRenderInst): void {
-//         let offs = renderInst.getUniformBufferOffset(ub_VtxBlendParams);
-//         const d = renderInst.mapUniformBufferF32(ub_VtxBlendParams);
-//         fillVtxBlendParamsData(d, offs, vtxBlendParams);
-//     }
-
-//     public destroy(device: GfxDevice): void {
-//         device.destroyInputState(this.inputState);
-//         if (this.zeroBuffer !== null)
-//             device.destroyBuffer(this.zeroBuffer);
-//     }
-// }
-
 interface ShapeConfig {
     matrix: mat4;
     boneMatrices: mat4[];
@@ -222,23 +125,24 @@ export class ShapeGeometry {
 
         this.shapeHelper.fillPacketParams(this.packetParams, renderInst);
 
+        this.computeModelView(this.vtxBlendParams.u_ModelView, config.camera, config.matrix);
 
         // u_BlendMtx[0..numJoints-1]: transforms bind -> joint-local -> posed -> view. Used for vertices that are blended between 2 bones.
         for (let i = 0; i < this.invBindMatrices.length; i++) {
-            mat4.copy(this.scratchMtx, config.boneMatrices[i]);
+            // mat4.copy(this.scratchMtx, config.boneMatrices[i]);
             // FIXME: restore correct behavior for beta models with fine-skinning (no joint-local optimization)
             //if (!this.hasBetaFineSkinning)
-                mat4.mul(this.scratchMtx, this.scratchMtx, this.invBindMatrices[i]);
-            mat4.mul(this.scratchMtx, config.matrix, this.scratchMtx);
-            this.computeModelView(this.vtxBlendParams.u_BlendMtx[i], config.camera, this.scratchMtx);
+                mat4.mul(this.vtxBlendParams.u_BlendMtx[i], config.boneMatrices[i], this.invBindMatrices[i]);
+            // mat4.mul(this.scratchMtx, config.matrix, this.scratchMtx);
+            // this.computeModelView(this.vtxBlendParams.u_BlendMtx[i], config.camera, this.scratchMtx);
         }
 
         // u_BlendMtx[numJoints..2*numJoints-1]: transforms joint-local -> posed -> view. Used for vertices that are attached to 1 bone.
         // As an optimization, vertices on 1 bone are stored in joint-local space.
         for (let i = 0; i < this.invBindMatrices.length; i++) {
-            mat4.copy(this.scratchMtx, config.boneMatrices[i]);
-            mat4.mul(this.scratchMtx, config.matrix, this.scratchMtx);
-            this.computeModelView(this.vtxBlendParams.u_BlendMtx[this.invBindMatrices.length + i], config.camera, this.scratchMtx);
+            mat4.copy(this.vtxBlendParams.u_BlendMtx[this.invBindMatrices.length + i], config.boneMatrices[i]);
+            // mat4.mul(this.scratchMtx, config.matrix, this.scratchMtx);
+            // this.computeModelView(this.vtxBlendParams.u_BlendMtx[this.invBindMatrices.length + i], config.camera, this.scratchMtx);
         }
 
         this.shapeHelper.fillVtxBlendParams(this.vtxBlendParams, renderInst);
