@@ -748,6 +748,11 @@ function generateRunVertices(loadedVertexLayout: LoadedVertexLayout, vatLayout: 
             S += `
     ${compileWriteOneComponent(dstOffs, `(${value} / 3)`)};`;
 
+            if (vtxAttrib === GX.Attr.PNMTXIDX) {
+                S += `
+    const pnmtxidx = (${value} / 3)|0;`;
+            }
+
             return S;
         }
 
@@ -764,15 +769,9 @@ function generateRunVertices(loadedVertexLayout: LoadedVertexLayout, vatLayout: 
                 const srcOffs: string = `${attrOffs} + ${i * srcAttrCompSize}`;
 
                 const value = compileReadOneComponent(viewName, srcOffs);
-                if (vtxAttrib === GX.Attr.PNMTXIDX) {
-                    S += `
-    const pnmtxidx = ${value};
-    ${compileWriteOneComponent(dstOffs, `pnmtxidx`)};
-`;
-                } else {
-                    S += `
+
+                S += `
     ${compileWriteOneComponent(dstOffs, value)};`;
-                }
             }
 
             return S;
@@ -857,7 +856,7 @@ function generateRunVertices(loadedVertexLayout: LoadedVertexLayout, vatLayout: 
         result += `
     const blendIndices = [0, 0, 0, 0];
     const blendWeights = [1, 0, 0, 0];
-    vtxBlendInfo.getBlendParams(blendIndices, blendWeights, (pnmtxidx/3)|0, idx${GX.Attr.POS});
+    vtxBlendInfo.getBlendParams(blendIndices, blendWeights, pnmtxidx, idx${GX.Attr.POS});
 
     // BLENDINDICES
     ${compileWriteOneComponentF32(dstOffs + 0, `blendIndices[0]`)};
