@@ -1,10 +1,9 @@
 import { mat4, vec4 } from 'gl-matrix';
-import { GfxDevice, GfxVertexBufferDescriptor, GfxInputState, GfxInputLayout, GfxBuffer, GfxBufferUsage, GfxIndexBufferDescriptor, GfxBufferFrequencyHint } from '../gfx/platform/GfxPlatform';
-import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexLayout, LoadedVertexData, GX_Array, VtxLoader, VertexAttributeInput, LoadedVertexPacket, VtxBlendInfo } from '../gx/gx_displaylist';
-import { PacketParams, MaterialParams, GXMaterialHelperGfx, createInputLayout, ub_PacketParams, ub_PacketParamsBufferSize, fillPacketParamsData, ColorKind, VtxBlendParams, ub_VtxBlendParams, fillVtxBlendParamsData, ub_VtxBlendParamsBufferSize, GXShapeHelperGfx, loadedDataCoalescerComboGfx } from '../gx/gx_render';
+import { GfxDevice } from '../gfx/platform/GfxPlatform';
+import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexData, GX_Array, VtxLoader, VtxBlendInfo } from '../gx/gx_displaylist';
+import { PacketParams, MaterialParams, GXMaterialHelperGfx, ColorKind, VtxBlendParams, GXShapeHelperGfx, loadedDataCoalescerComboGfx } from '../gx/gx_render';
 import { GfxRenderInstManager, GfxRenderInst } from "../gfx/render/GfxRenderer";
-import { makeStaticDataBuffer, GfxBufferCoalescerCombo } from '../gfx/helpers/BufferHelpers';
-import { GfxRenderCache } from '../gfx/render/GfxRenderCache';
+import { GfxBufferCoalescerCombo } from '../gfx/helpers/BufferHelpers';
 import { Camera, computeViewMatrix } from '../Camera';
 import ArrayBufferSlice from '../ArrayBufferSlice';
 import { GXMaterial } from '../gx/gx_material';
