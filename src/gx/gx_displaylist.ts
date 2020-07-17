@@ -111,6 +111,16 @@ interface VatLayout {
     vcd: GX_VtxDesc[];
 }
 
+export abstract class VtxLoaderCustomizer {
+    // Returns true if this customizer produces the same loader- and shader-customizations as another.
+    // Used for caching.
+    public abstract equals(other: VtxLoaderCustomizer): boolean;
+
+    public abstract allocateVertexInputs(allocateVertexInput: (attrInput: VertexAttributeInput, format: GfxFormat) => SingleVertexInputLayout): void;
+
+    public abstract compilePostLoader(S: string): string;
+}
+
 // Describes the loaded vertex layout.
 export interface LoadedVertexLayout {
     indexFormat: GfxFormat;
@@ -121,9 +131,7 @@ export interface LoadedVertexLayout {
     vertexAttributeOffsets: number[];
     vertexAttributeFormats: GfxFormat[];
 
-    useVtxBlends: boolean;
-    blendIndicesOffset: number;
-    blendWeightsOffset: number;
+    customizer?: VtxLoaderCustomizer;
 }
 
 interface VertexLayout extends LoadedVertexLayout, VtxLoaderDesc {
@@ -173,10 +181,10 @@ export interface LoadOptions {
 export interface VtxLoader {
     loadedVertexLayout: LoadedVertexLayout;
     parseDisplayList: (srcBuffer: ArrayBufferSlice, loadOptions?: LoadOptions) => LoadedVertexData;
-    loadVertexData: (loadedVertexData: LoadedVertexData, vtxArrays: GX_Array[], vtxBlendInfo?: VtxBlendInfo) => void;
+    loadVertexData: (loadedVertexData: LoadedVertexData, vtxArrays: GX_Array[], customInfo?: any) => void;
 
     // Quick helper.
-    runVertices: (vtxArrays: GX_Array[], srcBuffer: ArrayBufferSlice, loadOptions?: LoadOptions, vtxBlendInfo?: VtxBlendInfo) => LoadedVertexData;
+    runVertices: (vtxArrays: GX_Array[], srcBuffer: ArrayBufferSlice, loadOptions?: LoadOptions, customInfo?: any) => LoadedVertexData;
 }
 
 //#region Vertex Attribute Setup
@@ -487,7 +495,7 @@ function translateVatLayout(vatFormat: GX_VtxAttrFmt[], vcd: GX_VtxDesc[]): VatL
     return { srcVertexSize, vatFormat, vcd };
 }
 
-export function compileLoadedVertexLayout(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDesc[], useVtxBlends: boolean = false): VertexLayout {
+export function compileLoadedVertexLayout(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDesc[], customizer?: VtxLoaderCustomizer): VertexLayout {
     // Copy inputs since we use them as a cache.
     vat = arrayCopy(vat, vatCopy);
     vcd = arrayCopy(vcd, vcdCopy) as GX_VtxDesc[];
@@ -576,13 +584,8 @@ export function compileLoadedVertexLayout(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDes
         vertexAttributeFormats[vtxAttrib] = fieldFormat;
     }
 
-    let blendIndicesOffset = 0;
-    let blendWeightsOffset = 0;
-    if (useVtxBlends) {
-        let input = allocateVertexInput(VertexAttributeInput.BLENDINDICES, GfxFormat.F32_RGBA); // TODO: use integer format?
-        blendIndicesOffset = input.bufferOffset;
-        input = allocateVertexInput(VertexAttributeInput.BLENDWEIGHTS, GfxFormat.F32_RGBA);
-        blendWeightsOffset = input.bufferOffset;
+    if (customizer !== undefined) {
+        customizer.allocateVertexInputs(allocateVertexInput);
     }
 
     // Align the whole thing to our minimum required alignment (F32).
@@ -591,17 +594,13 @@ export function compileLoadedVertexLayout(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDes
 
     const indexFormat = GfxFormat.U16_R;
 
-    return { indexFormat, vertexBufferStrides, singleVertexInputLayouts, vertexAttributeOffsets, vertexAttributeFormats, vatLayouts, vat, vcd, useVtxBlends, blendIndicesOffset, blendWeightsOffset };
+    return { indexFormat, vertexBufferStrides, singleVertexInputLayouts, vertexAttributeOffsets, vertexAttributeFormats, vatLayouts, vat, vcd, customizer };
 }
 //#endregion
 
 //#region Vertex Loader JIT
-export interface VtxBlendInfo {
-    getBlendParams(indices: Array<number>, weights: Array<number>, pnmtxidx?: number, posidx?: number): void;
-}
-
-type SingleVtxLoaderFunc = (dstVertexDataView: DataView, dstVertexDataOffs: number, dlView: DataView, dlOffs: number, vtxArrayViews: DataView[], vtxArrayStrides: number[], vtxBlendInfo?: VtxBlendInfo) => number;
-type SingleVatLoaderFunc = (dst: LoadedVertexData, loadedVertexLayout: LoadedVertexLayout, dstVertexDataView: DataView, dstVertexDataOffs: number, dlView: DataView, vtxArrayViews: DataView[], vtxArrayStrides: number[], vtxBlendInfo?: VtxBlendInfo) => number;
+type SingleVtxLoaderFunc = (dstVertexDataView: DataView, dstVertexDataOffs: number, dlView: DataView, dlOffs: number, vtxArrayViews: DataView[], vtxArrayStrides: number[], customInfo?: any) => number;
+type SingleVatLoaderFunc = (dst: LoadedVertexData, loadedVertexLayout: LoadedVertexLayout, dstVertexDataView: DataView, dstVertexDataOffs: number, dlView: DataView, vtxArrayViews: DataView[], vtxArrayStrides: number[], customInfo?: any) => number;
 
 function generateRunVertices(loadedVertexLayout: LoadedVertexLayout, vatLayout: VatLayout): string {
     function compileVtxArrayViewName(vtxAttrib: GX.Attr): string {
@@ -851,28 +850,8 @@ function generateRunVertices(loadedVertexLayout: LoadedVertexLayout, vatLayout: 
 
     let result = compileVatLayout(vatLayout);
 
-    if (loadedVertexLayout.useVtxBlends) {
-        let dstOffs = loadedVertexLayout.blendIndicesOffset;
-        result += `
-    const blendIndices = [0, 0, 0, 0];
-    const blendWeights = [1, 0, 0, 0];
-    vtxBlendInfo.getBlendParams(blendIndices, blendWeights, pnmtxidx, idx${GX.Attr.POS});
-
-    // BLENDINDICES
-    ${compileWriteOneComponentF32(dstOffs + 0, `blendIndices[0]`)};
-    ${compileWriteOneComponentF32(dstOffs + 4, `blendIndices[1]`)};
-    ${compileWriteOneComponentF32(dstOffs + 8, `blendIndices[2]`)};
-    ${compileWriteOneComponentF32(dstOffs + 12, `blendIndices[3]`)};
-`;
-
-        dstOffs = loadedVertexLayout.blendWeightsOffset;
-        result += `
-    // BLENDWEIGHTS
-    ${compileWriteOneComponentF32(dstOffs + 0, `blendWeights[0]`)};
-    ${compileWriteOneComponentF32(dstOffs + 4, `blendWeights[1]`)};
-    ${compileWriteOneComponentF32(dstOffs + 8, `blendWeights[2]`)};
-    ${compileWriteOneComponentF32(dstOffs + 12, `blendWeights[3]`)};
-`;
+    if (loadedVertexLayout.customizer !== undefined) {
+        result = loadedVertexLayout.customizer.compilePostLoader(result);
     }
 
     return result;
@@ -897,7 +876,7 @@ return function() {
 function compileSingleVtxLoader(loadedVertexLayout: LoadedVertexLayout, vatLayout: VatLayout): SingleVtxLoaderFunc {
     const runVertices = generateRunVertices(loadedVertexLayout, vatLayout);
     const source = `
-function runVertices(dstVertexDataView, dstVertexDataOffs, dlView, drawCallIdx, vtxArrayViews, vtxArrayStrides${loadedVertexLayout.useVtxBlends ? `, vtxBlendInfo` : ``}) {
+function runVertices(dstVertexDataView, dstVertexDataOffs, dlView, drawCallIdx, vtxArrayViews, vtxArrayStrides${loadedVertexLayout.customizer !== undefined ? `, customInfo` : ``}) {
     ${runVertices}
     return drawCallIdx;
 }
@@ -908,7 +887,7 @@ function runVertices(dstVertexDataView, dstVertexDataOffs, dlView, drawCallIdx, 
 function compileSingleVatLoader(loadedVertexLayout: LoadedVertexLayout, vatLayout: VatLayout): SingleVatLoaderFunc {
     const runVertices = generateRunVertices(loadedVertexLayout, vatLayout);
     const source = `
-function runVertices(dst, loadedVertexLayout, dstVertexDataView, dstVertexDataOffs, dlView, vtxArrayViews, vtxArrayStrides${loadedVertexLayout.useVtxBlends ? `, vtxBlendInfo` : ``}) {
+function runVertices(dst, loadedVertexLayout, dstVertexDataView, dstVertexDataOffs, dlView, vtxArrayViews, vtxArrayStrides${loadedVertexLayout.customizer !== undefined ? `, customInfo` : ``}) {
     for (let i = 0; i < dst.drawCalls.length; i++) {
         const drawCall = dst.drawCalls[i];
 
@@ -1164,10 +1143,7 @@ class VtxLoaderImpl implements VtxLoader {
         return { indexData, totalIndexCount, totalVertexCount, draws: draws, vertexId, vertexBuffers, dlView, drawCalls };
     }
 
-    public loadVertexData(dst: LoadedVertexData, vtxArrays: GX_Array[], vtxBlendInfo?: VtxBlendInfo): void {
-        if (this.loadedVertexLayout.useVtxBlends && vtxBlendInfo === undefined)
-            throw Error(`No vertex blend info provided`);
-            
+    public loadVertexData(dst: LoadedVertexData, vtxArrays: GX_Array[], customInfo?: any): void {            
         const vtxArrayViews: DataView[] = [];
         const vtxArrayStrides: number[] = [];
         for (let i = 0; i < GX.Attr.MAX; i++) {
@@ -1189,23 +1165,23 @@ class VtxLoaderImpl implements VtxLoader {
         // Now make the data.
 
         if (this.singleVatLoader !== null) {
-            this.singleVatLoader(dst, this.loadedVertexLayout, dstVertexDataView, dstVertexDataOffs, dlView, vtxArrayViews, vtxArrayStrides, vtxBlendInfo);
+            this.singleVatLoader(dst, this.loadedVertexLayout, dstVertexDataView, dstVertexDataOffs, dlView, vtxArrayViews, vtxArrayStrides, customInfo);
         } else {
             for (let i = 0; i < drawCalls.length; i++) {
                 const drawCall = drawCalls[i];
 
                 let drawCallIdx = drawCall.srcOffs;
                 for (let j = 0; j < drawCall.vertexCount; j++) {
-                    drawCallIdx = this.vtxLoaders[drawCall.vertexFormat](dstVertexDataView, dstVertexDataOffs, dlView, drawCallIdx, vtxArrayViews, vtxArrayStrides, vtxBlendInfo);
+                    drawCallIdx = this.vtxLoaders[drawCall.vertexFormat](dstVertexDataView, dstVertexDataOffs, dlView, drawCallIdx, vtxArrayViews, vtxArrayStrides, customInfo);
                     dstVertexDataOffs += this.loadedVertexLayout.vertexBufferStrides[0];
                 }
             }
         }
     }
 
-    public runVertices(vtxArrays: GX_Array[], srcBuffer: ArrayBufferSlice, loadOptions?: LoadOptions, vtxBlendInfo?: VtxBlendInfo): LoadedVertexData {
+    public runVertices(vtxArrays: GX_Array[], srcBuffer: ArrayBufferSlice, loadOptions?: LoadOptions, customInfo?: any): LoadedVertexData {
         const loadedVertexData = this.parseDisplayList(srcBuffer, loadOptions);
-        this.loadVertexData(loadedVertexData, vtxArrays, vtxBlendInfo);
+        this.loadVertexData(loadedVertexData, vtxArrays, customInfo);
         return loadedVertexData;
     }
 }
@@ -1213,7 +1189,7 @@ class VtxLoaderImpl implements VtxLoader {
 interface VtxLoaderDesc {
     vat: GX_VtxAttrFmt[][];
     vcd: GX_VtxDesc[];
-    useVtxBlends: boolean;
+    customizer?: VtxLoaderCustomizer;
 }
 
 type EqualFunc<K> = (a: K, b: K) => boolean;
@@ -1270,10 +1246,15 @@ function vcdEqual(a: GX_VtxDesc | undefined, b: GX_VtxDesc | undefined): boolean
     return a.enableOutput === b.enableOutput && a.type === b.type;
 }
 
+function vtxLoaderCustomizerEqual(a?: VtxLoaderCustomizer, b?: VtxLoaderCustomizer): boolean {
+    if (a === undefined || b === undefined) return a === b;
+    return a.equals(b);
+}
+
 function vtxLoaderDescEqual(a: VtxLoaderDesc, b: VtxLoaderDesc): boolean {
     if (!arrayEqual(a.vat, b.vat, vatEqual)) return false;
     if (!arrayEqual(a.vcd, b.vcd, vcdEqual)) return false;
-    if (a.useVtxBlends !== b.useVtxBlends) return false;
+    if (!vtxLoaderCustomizerEqual(a.customizer, b.customizer)) return false;
     return true;
 }
 
@@ -1283,21 +1264,21 @@ function compileVtxLoaderDesc(desc: VtxLoaderDesc): VtxLoader {
     if (loader === null) {
         const vat = desc.vat;
         const vcd = desc.vcd;
-        const loadedVertexLayout: VertexLayout = compileLoadedVertexLayout(vat, vcd, desc.useVtxBlends);
+        const loadedVertexLayout: VertexLayout = compileLoadedVertexLayout(vat, vcd, desc.customizer);
         loader = new VtxLoaderImpl(loadedVertexLayout);
         cache.add(loadedVertexLayout, loader);
     }
     return loader;
 }
 
-export function compileVtxLoaderMultiVat(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDesc[], useVtxBlends: boolean = false): VtxLoader {
-    const desc = { vat, vcd, useVtxBlends };
+export function compileVtxLoaderMultiVat(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDesc[], customizer?: VtxLoaderCustomizer): VtxLoader {
+    const desc = { vat, vcd, customizer };
     return compileVtxLoaderDesc(desc);
 }
 
-export function compileVtxLoader(vatFormat: GX_VtxAttrFmt[], vcd: GX_VtxDesc[], useVtxBlends: boolean = false): VtxLoader {
+export function compileVtxLoader(vatFormat: GX_VtxAttrFmt[], vcd: GX_VtxDesc[], customizer?: VtxLoaderCustomizer): VtxLoader {
     const vat = [vatFormat];
-    const desc = { vat, vcd, useVtxBlends };
+    const desc = { vat, vcd, customizer };
     return compileVtxLoaderDesc(desc);
 }
 

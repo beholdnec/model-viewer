@@ -1,6 +1,7 @@
 import { mat4, vec4 } from 'gl-matrix';
-import { GfxDevice } from '../gfx/platform/GfxPlatform';
-import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexData, GX_Array, VtxLoader, VtxBlendInfo } from '../gx/gx_displaylist';
+import { GfxDevice, GfxFormat } from '../gfx/platform/GfxPlatform';
+import * as GX from '../gx/gx_enum';
+import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexData, GX_Array, VtxLoader, VtxLoaderCustomizer, VertexAttributeInput, SingleVertexInputLayout } from '../gx/gx_displaylist';
 import { PacketParams, MaterialParams, GXMaterialHelperGfx, ColorKind, VtxBlendParams, GXShapeHelperGfx, loadedDataCoalescerComboGfx } from '../gx/gx_render';
 import { GfxRenderInstManager, GfxRenderInst } from "../gfx/render/GfxRenderer";
 import { GfxBufferCoalescerCombo } from '../gfx/helpers/BufferHelpers';
@@ -12,6 +13,7 @@ import { colorNewFromRGBA, colorCopy, White } from '../Color';
 import { SFAMaterial } from './materials';
 import { ModelRenderContext } from './models';
 import { ViewState, computeModelView } from './util';
+import { getSystemEndianness, Endianness } from '../endian';
 
 interface ShapeConfig {
     matrix: mat4;
@@ -32,6 +34,53 @@ interface BlendMtxSlot {
     invertBind: boolean;
 }
 
+class VtxBlendingCustomizer extends VtxLoaderCustomizer {
+    private blendIndicesOffset = 0;
+    private blendWeightsOffset = 0;
+
+    public equals(other: VtxLoaderCustomizer) {
+        return other instanceof VtxBlendingCustomizer;
+    }
+
+    public allocateVertexInputs(allocateVertexInput: (attrInput: VertexAttributeInput, format: GfxFormat) => SingleVertexInputLayout): void {
+        let input = allocateVertexInput(VertexAttributeInput.COUNT + 0, GfxFormat.F32_RGBA); // TODO: use integer format?
+        this.blendIndicesOffset = input.bufferOffset;
+        input = allocateVertexInput(VertexAttributeInput.COUNT + 1, GfxFormat.F32_RGBA);
+        this.blendWeightsOffset = input.bufferOffset;
+    }
+
+    public compilePostLoader(S: string): string {
+        function compileWriteOneComponentF32(offs: number, value: string): string {
+            const littleEndian = (getSystemEndianness() === Endianness.LITTLE_ENDIAN);
+            const dstOffs = `dstVertexDataOffs + ${offs}`;
+            return `dstVertexDataView.setFloat32(${dstOffs}, ${value}, ${littleEndian})`;
+        }
+
+        let dstOffs = this.blendIndicesOffset;
+        S += `
+    const blendIndices = [0, 0, 0, 0];
+    const blendWeights = [1, 0, 0, 0];
+    customInfo.getBlendParams(blendIndices, blendWeights, pnmtxidx, idx${GX.Attr.POS});
+
+    // BLENDINDICES
+    ${compileWriteOneComponentF32(dstOffs + 0, `blendIndices[0]`)};
+    ${compileWriteOneComponentF32(dstOffs + 4, `blendIndices[1]`)};
+    ${compileWriteOneComponentF32(dstOffs + 8, `blendIndices[2]`)};
+    ${compileWriteOneComponentF32(dstOffs + 12, `blendIndices[3]`)};
+`;
+
+        dstOffs = this.blendWeightsOffset;
+        S += `
+    // BLENDWEIGHTS
+    ${compileWriteOneComponentF32(dstOffs + 0, `blendWeights[0]`)};
+    ${compileWriteOneComponentF32(dstOffs + 4, `blendWeights[1]`)};
+    ${compileWriteOneComponentF32(dstOffs + 8, `blendWeights[2]`)};
+    ${compileWriteOneComponentF32(dstOffs + 12, `blendWeights[3]`)};
+`;
+        return S;
+    }
+}
+
 // The vertices and polygons of a shape.
 export class ShapeGeometry {
     private vtxLoader: VtxLoader;
@@ -45,6 +94,7 @@ export class ShapeGeometry {
 
     private pnMatrixMap: number[];
 
+    private vtxBlendingCustomizer?: VtxBlendingCustomizer;
     private blendMtxSlots: BlendMtxSlot[] = [];
 
     constructor(private vtxArrays: GX_Array[], vcd: GX_VtxDesc[], vat: GX_VtxAttrFmt[][], displayList: ArrayBufferSlice, private useVtxBlends: boolean, pnMatrixMap: number[], private vertexBlendingPieces: VertexBlendingPiece[] = [], private invBindMatrices: mat4[] = []) {
@@ -52,8 +102,10 @@ export class ShapeGeometry {
         for (let i = 0; i < pnMatrixMap.length; i++)
             this.pnMatrixMap.push(pnMatrixMap[i]);
 
-        this.vtxLoader = compileVtxLoaderMultiVat(vat, vcd, useVtxBlends);
-        this.loadedVertexData = this.vtxLoader.runVertices(this.vtxArrays, displayList, undefined, this.useVtxBlends ? this.vtxBlendInfo : undefined);
+        if (this.useVtxBlends)
+            this.vtxBlendingCustomizer = new VtxBlendingCustomizer();
+        this.vtxLoader = compileVtxLoaderMultiVat(vat, vcd, this.vtxBlendingCustomizer);
+        this.loadedVertexData = this.vtxLoader.runVertices(this.vtxArrays, displayList, undefined, this.vtxBlendInfo);
     }
 
     private findVertexBlendingPiece(posidx: number): VertexBlendingPiece | undefined {
@@ -75,7 +127,7 @@ export class ShapeGeometry {
         }
     }
 
-    private vtxBlendInfo: VtxBlendInfo = {
+    private vtxBlendInfo = {
         getBlendParams: (indices: Array<number>, weights: Array<number>, pnmtxidx: number = 0, posidx?: number) => {
             if (posidx !== undefined) {
                 // Use position index to find blend params
