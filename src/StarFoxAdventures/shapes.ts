@@ -1,7 +1,7 @@
 import { mat4, vec4 } from 'gl-matrix';
 import { GfxDevice, GfxFormat } from '../gfx/platform/GfxPlatform';
 import * as GX from '../gx/gx_enum';
-import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexData, GX_Array, VtxLoader, VtxLoaderCustomizer, VertexAttributeInput, SingleVertexInputLayout } from '../gx/gx_displaylist';
+import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexData, GX_Array, VtxLoader, VtxLoaderCustomizer, VertexAttributeInput, SingleVertexInputLayout, CustomVtxInput } from '../gx/gx_displaylist';
 import { PacketParams, MaterialParams, GXMaterialHelperGfx, ColorKind, VtxBlendParams, GXShapeHelperGfx, loadedDataCoalescerComboGfx } from '../gx/gx_render';
 import { GfxRenderInstManager, GfxRenderInst } from "../gfx/render/GfxRenderer";
 import { GfxBufferCoalescerCombo } from '../gfx/helpers/BufferHelpers';
@@ -35,28 +35,31 @@ interface BlendMtxSlot {
 }
 
 class VtxBlendingCustomizer extends VtxLoaderCustomizer {
-    private blendIndicesOffset = 0;
-    private blendWeightsOffset = 0;
-
     public equals(other: VtxLoaderCustomizer) {
         return other instanceof VtxBlendingCustomizer;
     }
 
-    public allocateVertexInputs(allocateVertexInput: (attrInput: VertexAttributeInput, format: GfxFormat) => SingleVertexInputLayout): void {
-        let input = allocateVertexInput(VertexAttributeInput.COUNT + 0, GfxFormat.F32_RGBA); // TODO: use integer format?
-        this.blendIndicesOffset = input.bufferOffset;
-        input = allocateVertexInput(VertexAttributeInput.COUNT + 1, GfxFormat.F32_RGBA);
-        this.blendWeightsOffset = input.bufferOffset;
+    public getCustomVtxInputs(): CustomVtxInput[] {
+        return [
+            // Indices
+            {attrInput: VertexAttributeInput.COUNT + 0, format: GfxFormat.F32_RGBA}, // TODO: use integer format?
+            // Weights
+            {attrInput: VertexAttributeInput.COUNT + 1, format: GfxFormat.F32_RGBA},
+        ];
     }
 
-    public compilePostLoader(S: string): string {
+    public compilePostLoader(S: string, customInputs: SingleVertexInputLayout[]): string {
         function compileWriteOneComponentF32(offs: number, value: string): string {
             const littleEndian = (getSystemEndianness() === Endianness.LITTLE_ENDIAN);
             const dstOffs = `dstVertexDataOffs + ${offs}`;
             return `dstVertexDataView.setFloat32(${dstOffs}, ${value}, ${littleEndian})`;
         }
 
-        let dstOffs = this.blendIndicesOffset;
+        function findCustomInput(attrInput: VertexAttributeInput) {
+            return customInputs.find((input) => input.attrInput === attrInput);
+        }
+
+        let dstOffs = findCustomInput(VertexAttributeInput.COUNT + 0)!.bufferOffset;
         S += `
     const blendIndices = [0, 0, 0, 0];
     const blendWeights = [1, 0, 0, 0];
@@ -69,7 +72,7 @@ class VtxBlendingCustomizer extends VtxLoaderCustomizer {
     ${compileWriteOneComponentF32(dstOffs + 12, `blendIndices[3]`)};
 `;
 
-        dstOffs = this.blendWeightsOffset;
+        dstOffs = findCustomInput(VertexAttributeInput.COUNT + 1)!.bufferOffset;
         S += `
     // BLENDWEIGHTS
     ${compileWriteOneComponentF32(dstOffs + 0, `blendWeights[0]`)};

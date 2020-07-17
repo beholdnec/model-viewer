@@ -78,9 +78,6 @@ export const enum VertexAttributeInput {
     TEX23,
     TEX45,
     TEX67,
-    // These are not supported in original GX, but can be used by noclip.
-    BLENDINDICES,
-    BLENDWEIGHTS,
     COUNT,
 }
 
@@ -111,14 +108,19 @@ interface VatLayout {
     vcd: GX_VtxDesc[];
 }
 
+export interface CustomVtxInput {
+    attrInput: VertexAttributeInput;
+    format: GfxFormat;
+}
+
 export abstract class VtxLoaderCustomizer {
     // Returns true if this customizer produces the same loader- and shader-customizations as another.
     // Used for caching.
     public abstract equals(other: VtxLoaderCustomizer): boolean;
 
-    public abstract allocateVertexInputs(allocateVertexInput: (attrInput: VertexAttributeInput, format: GfxFormat) => SingleVertexInputLayout): void;
+    public abstract getCustomVtxInputs(): CustomVtxInput[];
 
-    public abstract compilePostLoader(S: string): string;
+    public abstract compilePostLoader(S: string, customInputs: SingleVertexInputLayout[]): string;
 }
 
 // Describes the loaded vertex layout.
@@ -132,6 +134,7 @@ export interface LoadedVertexLayout {
     vertexAttributeFormats: GfxFormat[];
 
     customizer?: VtxLoaderCustomizer;
+    customVertexInputLayouts?: SingleVertexInputLayout[];
 }
 
 interface VertexLayout extends LoadedVertexLayout, VtxLoaderDesc {
@@ -584,8 +587,13 @@ export function compileLoadedVertexLayout(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDes
         vertexAttributeFormats[vtxAttrib] = fieldFormat;
     }
 
+    const customVertexInputLayouts = [];
     if (customizer !== undefined) {
-        customizer.allocateVertexInputs(allocateVertexInput);
+        const customInputs = customizer.getCustomVtxInputs();
+        for (let i = 0; i < customInputs.length; i++) {
+            let input = allocateVertexInput(customInputs[i].attrInput, customInputs[i].format);
+            customVertexInputLayouts.push(input);
+        }
     }
 
     // Align the whole thing to our minimum required alignment (F32).
@@ -594,7 +602,7 @@ export function compileLoadedVertexLayout(vat: GX_VtxAttrFmt[][], vcd: GX_VtxDes
 
     const indexFormat = GfxFormat.U16_R;
 
-    return { indexFormat, vertexBufferStrides, singleVertexInputLayouts, vertexAttributeOffsets, vertexAttributeFormats, vatLayouts, vat, vcd, customizer };
+    return { indexFormat, vertexBufferStrides, singleVertexInputLayouts, vertexAttributeOffsets, vertexAttributeFormats, vatLayouts, vat, vcd, customizer, customVertexInputLayouts };
 }
 //#endregion
 
@@ -851,7 +859,7 @@ function generateRunVertices(loadedVertexLayout: LoadedVertexLayout, vatLayout: 
     let result = compileVatLayout(vatLayout);
 
     if (loadedVertexLayout.customizer !== undefined) {
-        result = loadedVertexLayout.customizer.compilePostLoader(result);
+        result = loadedVertexLayout.customizer.compilePostLoader(result, loadedVertexLayout.customVertexInputLayouts ?? []);
     }
 
     return result;

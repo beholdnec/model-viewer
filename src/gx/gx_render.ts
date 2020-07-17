@@ -443,8 +443,21 @@ export function createInputLayout(device: GfxDevice, cache: GfxRenderCache, load
         } else if (wantZeroBuffer) {
             const bufferByteOffset = 0;
             const bufferIndex = loadedVertexLayout.vertexBufferStrides.length;
+            if (attribGenDef === undefined)
+                debugger; // WTF?
             vertexAttributeDescriptors.push({ location: attribLocation, format: attribGenDef.format, bufferIndex, bufferByteOffset });
             usesZeroBuffer = true;
+        }
+    }
+    
+    if (loadedVertexLayout.customVertexInputLayouts !== undefined) {
+        for (let i = 0; i < loadedVertexLayout.customVertexInputLayouts.length; i++) {
+            const attrib = loadedVertexLayout.customVertexInputLayouts[i];
+            const attribLocation = GX_Material.getVertexInputLocation(attrib.attrInput);
+            
+            const bufferByteOffset = attrib.bufferOffset;
+            const bufferIndex = attrib.bufferIndex;
+            vertexAttributeDescriptors.push({ location: attribLocation, format: attrib.format, bufferIndex, bufferByteOffset });
         }
     }
 

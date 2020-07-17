@@ -15,6 +15,7 @@ import { MathConstants, transformVec3Mat4w1, transformVec3Mat4w0 } from '../Math
 import { DisplayListRegisters, VertexAttributeInput } from './gx_displaylist';
 import { DeviceProgram } from '../Program';
 import { NUM_BLEND_MATRICES } from './gx_render';
+import { Vertex } from '../BanjoKazooie/f3dex';
 
 // TODO(jstpierre): Move somewhere better...
 export const EFB_WIDTH = 640;
@@ -229,11 +230,13 @@ const vtxAttributeGenDefs: VertexAttributeGenDef[] = [
     { attrInput: VertexAttributeInput.TEX23,         name: "Tex23",         format: GfxFormat.F32_RGBA },
     { attrInput: VertexAttributeInput.TEX45,         name: "Tex45",         format: GfxFormat.F32_RGBA },
     { attrInput: VertexAttributeInput.TEX67,         name: "Tex67",         format: GfxFormat.F32_RGBA },
-    { attrInput: VertexAttributeInput.BLENDINDICES,  name: "BlendIndices",  format: GfxFormat.F32_RGBA },
-    { attrInput: VertexAttributeInput.BLENDWEIGHTS,  name: "BlendWeights",  format: GfxFormat.F32_RGBA },
 ];
 
 export function getVertexInputLocation(attrInput: VertexAttributeInput): number {
+    // XXX: custom attribute locations are placed after the common locations
+    if (attrInput >= VertexAttributeInput.COUNT) {
+        return vtxAttributeGenDefs.length + (attrInput - VertexAttributeInput.COUNT);
+    }
     return vtxAttributeGenDefs.findIndex((genDef) => genDef.attrInput === attrInput);
 }
 
@@ -1197,9 +1200,19 @@ ${this.generateFogFunc(`t_Fog`)}
     }
 
     private generateVertAttributeDefs() {
-        return vtxAttributeGenDefs.map((a, i) => {
+        let S = vtxAttributeGenDefs.map((a, i) => {
             return `layout(location = ${i}) in ${this.generateAttributeStorageType(a.format)} a_${a.name};`;
         }).join('\n');
+
+        if (this.material.useVtxBlends) {
+            // TODO: support general custom attributes
+            S += `
+    layout(location = ${vtxAttributeGenDefs.length + 0}) in vec4 a_BlendIndices;
+    layout(location = ${vtxAttributeGenDefs.length + 1}) in vec4 a_BlendWeights;
+`;
+        }
+
+        return S;
     }
 
     private generateMulPos(): string {
@@ -1248,6 +1261,7 @@ ${this.generateTexCoordVaryings()}
 ${both}
 ${this.generateVertAttributeDefs()}
 
+${this.material.useVtxBlends ? `
 Mat4x3 GetVtxBlendMatrix(uint idx) {
     return u_VtxBlendMtx[idx];
 }
@@ -1258,6 +1272,7 @@ Mat4x3 GetPosVtxBlendMatrix() {
         a_BlendWeights.x * GetVtxBlendMatrix(uint(a_BlendIndices.x)) +
         a_BlendWeights.y * GetVtxBlendMatrix(uint(a_BlendIndices.y));
 }
+` : ``}
 
 Mat4x3 GetPosTexMatrix(float t_MtxIdxFloat) {
     uint t_MtxIdx = uint(t_MtxIdxFloat);
