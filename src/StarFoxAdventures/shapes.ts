@@ -1,4 +1,4 @@
-import { mat4, vec4 } from 'gl-matrix';
+import { mat4, vec3, vec4 } from 'gl-matrix';
 import { GfxDevice, GfxFormat } from '../gfx/platform/GfxPlatform';
 import * as GX from '../gx/gx_enum';
 import { GX_VtxDesc, GX_VtxAttrFmt, compileVtxLoaderMultiVat, LoadedVertexData, GX_Array, VtxLoader, VtxLoaderCustomizer, VertexAttributeInput, SingleVertexInputLayout, CustomVtxInput } from '../gx/gx_displaylist';
@@ -100,7 +100,7 @@ export class ShapeGeometry {
     private vtxBlendingCustomizer?: VtxBlendingCustomizer;
     private blendMtxSlots: BlendMtxSlot[] = [];
 
-    constructor(private vtxArrays: GX_Array[], vcd: GX_VtxDesc[], vat: GX_VtxAttrFmt[][], displayList: ArrayBufferSlice, private useVtxBlends: boolean, pnMatrixMap: number[], private vertexBlendingPieces: VertexBlendingPiece[] = [], private invBindMatrices: mat4[] = []) {
+    constructor(private vtxArrays: GX_Array[], vcd: GX_VtxDesc[], vat: GX_VtxAttrFmt[][], displayList: ArrayBufferSlice, private useVtxBlends: boolean, pnMatrixMap: number[], private vertexBlendingPieces: VertexBlendingPiece[] = [], private invBindTranslations: vec3[] = []) {
         this.pnMatrixMap = [];
         for (let i = 0; i < pnMatrixMap.length; i++)
             this.pnMatrixMap.push(pnMatrixMap[i]);
@@ -204,7 +204,7 @@ export class ShapeGeometry {
             const slot = this.blendMtxSlots[i];
             mat4.copy(this.vtxBlendParams.u_BlendMtx[i], config.boneMatrices[slot.boneNum]);
             if (slot.invertBind)
-                mat4.mul(this.vtxBlendParams.u_BlendMtx[i], this.vtxBlendParams.u_BlendMtx[i], this.invBindMatrices[slot.boneNum]);
+                mat4.translate(this.vtxBlendParams.u_BlendMtx[i], this.vtxBlendParams.u_BlendMtx[i], this.invBindTranslations[slot.boneNum]);
         }
 
         this.shapeHelper.fillVtxBlendParams(this.vtxBlendParams, renderInst);
@@ -221,7 +221,6 @@ export class CommonShapeMaterial implements ShapeMaterial {
     private materialHelper: GXMaterialHelperGfx;
     private materialParams = new MaterialParams();
     private viewState: ViewState | undefined;
-    private scratchMtx = mat4.create();
 
     // Caution: Material is referenced, not copied.
     public setMaterial(material: SFAMaterial) {
@@ -253,9 +252,7 @@ export class CommonShapeMaterial implements ShapeMaterial {
 
         this.viewState.outdoorAmbientColor = this.material.factory.getAmbientColor(modelCtx.ambienceNum);
 
-        // mat4.mul(this.scratchMtx, boneMatrices[this.geom.pnMatrixMap[0]], modelMatrix);
-        mat4.copy(this.scratchMtx, modelMatrix);
-        computeModelView(this.viewState.modelViewMtx, modelCtx.viewerInput.camera, this.scratchMtx);
+        computeModelView(this.viewState.modelViewMtx, modelCtx.viewerInput.camera, modelMatrix);
         mat4.invert(this.viewState.invModelViewMtx, this.viewState.modelViewMtx);
 
         for (let i = 0; i < 8; i++) {
