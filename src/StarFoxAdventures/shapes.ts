@@ -170,7 +170,7 @@ export class ShapeGeometry {
         mat4.mul(dst, dst, modelMatrix);
     }
 
-    public setOnRenderInst(device: GfxDevice, renderInstManager: GfxRenderInstManager, renderInst: GfxRenderInst, config: ShapeConfig) {
+    public setOnRenderInst(device: GfxDevice, material: ShapeMaterial, renderInstManager: GfxRenderInstManager, renderInst: GfxRenderInst, config: ShapeConfig) {
         if (this.shapeHelper === null) {
             this.bufferCoalescer = loadedDataCoalescerComboGfx(device, [this.loadedVertexData]);
             this.shapeHelper = new GXShapeHelperGfx(device, renderInstManager.gfxRenderCache,
@@ -196,7 +196,7 @@ export class ShapeGeometry {
             this.computeModelView(this.packetParams.u_PosMtx[i], config.camera, this.scratchMtx);
         }
 
-        this.shapeHelper.fillPacketParams(this.packetParams, renderInst);
+        material.allocatePacketParamsDataOnInst(renderInst, this.packetParams);
 
         this.computeModelView(this.vtxBlendParams.u_ModelView, config.camera, config.matrix);
 
@@ -213,6 +213,7 @@ export class ShapeGeometry {
 
 export interface ShapeMaterial {
     setOnRenderInst: (device: GfxDevice, renderInstManager: GfxRenderInstManager, renderInst: GfxRenderInst, modelMatrix: mat4, modelCtx: ModelRenderContext, boneMatrices: mat4[]) => void;
+    allocatePacketParamsDataOnInst(renderInst: GfxRenderInst, packetParams: PacketParams): void;
 }
 
 export class CommonShapeMaterial implements ShapeMaterial {
@@ -238,8 +239,6 @@ export class CommonShapeMaterial implements ShapeMaterial {
     public setOnRenderInst(device: GfxDevice, renderInstManager: GfxRenderInstManager, renderInst: GfxRenderInst, modelMatrix: mat4, modelCtx: ModelRenderContext) {
         this.updateMaterialHelper();
         
-        const materialOffs = this.materialHelper.allocateMaterialParams(renderInst);
-
         if (this.viewState === undefined) {
             this.viewState = {
                 sceneCtx: modelCtx,
@@ -279,7 +278,11 @@ export class CommonShapeMaterial implements ShapeMaterial {
         }
 
         this.materialHelper.setOnRenderInst(device, renderInstManager.gfxRenderCache, renderInst);
-        this.materialHelper.fillMaterialParamsDataOnInst(renderInst, materialOffs, this.materialParams);
+        this.materialHelper.allocateMaterialParamsDataOnInst(renderInst, this.materialParams);
+    }
+
+    public allocatePacketParamsDataOnInst(renderInst: GfxRenderInst, packetParams: PacketParams): void {
+        this.materialHelper.allocatePacketParamsDataOnInst(renderInst, packetParams);
     }
 }
 
@@ -289,7 +292,7 @@ export class Shape {
     }
 
     public setOnRenderInst(device: GfxDevice, renderInstManager: GfxRenderInstManager, renderInst: GfxRenderInst, modelMatrix: mat4, modelCtx: ModelRenderContext, boneMatrices: mat4[]) {
-        this.geom.setOnRenderInst(device, renderInstManager, renderInst, {
+        this.geom.setOnRenderInst(device, this.material, renderInstManager, renderInst, {
             matrix: modelMatrix,
             boneMatrices: boneMatrices,
             camera: modelCtx.viewerInput.camera,

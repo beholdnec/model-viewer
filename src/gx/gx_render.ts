@@ -140,13 +140,15 @@ function fillMaterialParamsDataWithOptimizations(material: GX_Material.GXMateria
     assert(d.length >= offs);
 }
 
-export function fillPacketParamsData(d: Float32Array, bOffs: number, packetParams: PacketParams): void {
+function fillPacketParamsDataWithOptimizations(material: GX_Material.GXMaterial, d: Float32Array, bOffs: number, packetParams: PacketParams): void {
     let offs = bOffs;
 
-    for (let i = 0; i < 10; i++)
-        offs += fillMatrix4x3(d, offs, packetParams.u_PosMtx[i]);
+    if (GX_Material.materialUsePnMtxIdx(material))
+        for (let i = 0; i < 10; i++)
+            offs += fillMatrix4x3(d, offs, packetParams.u_PosMtx[i]);
+    else
+        offs += fillMatrix4x3(d, offs, packetParams.u_PosMtx[0]);
 
-    assert(offs === bOffs + ub_PacketParamsBufferSize);
     assert(d.length >= offs);
 }
 
@@ -354,6 +356,7 @@ export class GXMaterialHelperGfx {
     public programKey: number;
     public megaStateFlags: Partial<GfxMegaStateDescriptor>;
     public materialParamsBufferSize: number;
+    public packetParamsBufferSize: number;
     private materialHacks: GX_Material.GXMaterialHacks = {};
     private program!: GX_Material.GX_Program;
     private gfxProgram: GfxProgram | null = null;
@@ -363,6 +366,7 @@ export class GXMaterialHelperGfx {
             Object.assign(this.materialHacks, materialHacks);
 
         this.calcMaterialParamsBufferSize();
+        this.calcPacketParamsBufferSize();
         this.createProgram();
 
         this.megaStateFlags = {};
@@ -371,6 +375,10 @@ export class GXMaterialHelperGfx {
 
     public calcMaterialParamsBufferSize(): void {
         this.materialParamsBufferSize = GX_Material.getMaterialParamsBlockSize(this.material);
+    }
+
+    public calcPacketParamsBufferSize(): void {
+        this.packetParamsBufferSize = GX_Material.getPacketParamsBlockSize(this.material);
     }
 
     public cacheProgram(device: GfxDevice, cache: GfxRenderCache): void {
@@ -390,24 +398,27 @@ export class GXMaterialHelperGfx {
         this.createProgram();
     }
 
-    public fillMaterialParamsDataOnInst(renderInst: GfxRenderInst, offs: number, materialParams: MaterialParams): void {
-        const d = renderInst.mapUniformBufferF32(ub_MaterialParams);
-        fillMaterialParamsDataWithOptimizations(this.material, d, offs, materialParams);
-    }
-
     public fillMaterialParamsData(renderInstManager: GfxRenderInstManager, offs: number, materialParams: MaterialParams): void {
         const uniformBuffer = renderInstManager.getTemplateRenderInst().getUniformBuffer();
         const d = uniformBuffer.mapBufferF32(offs, this.materialParamsBufferSize);
         fillMaterialParamsDataWithOptimizations(this.material, d, offs, materialParams);
     }
 
-    public allocateMaterialParams(renderInst: GfxRenderInst): number {
-        return renderInst.allocateUniformBuffer(ub_MaterialParams, this.materialParamsBufferSize);
-    }
-
     public allocateMaterialParamsBlock(renderInstManager: GfxRenderInstManager): number {
         const uniformBuffer = renderInstManager.getTemplateRenderInst().getUniformBuffer();
         return uniformBuffer.allocateChunk(this.materialParamsBufferSize);
+    }
+
+    public allocateMaterialParamsDataOnInst(renderInst: GfxRenderInst, materialParams: MaterialParams): void {
+        const offs = renderInst.allocateUniformBuffer(GX_Material.GX_Program.ub_MaterialParams, this.materialParamsBufferSize);
+        const d = renderInst.mapUniformBufferF32(GX_Material.GX_Program.ub_MaterialParams);
+        fillMaterialParamsDataWithOptimizations(this.material, d, offs, materialParams);
+    }
+
+    public allocatePacketParamsDataOnInst(renderInst: GfxRenderInst, packetParams: PacketParams): void {
+        const offs = renderInst.allocateUniformBuffer(GX_Material.GX_Program.ub_PacketParams, this.packetParamsBufferSize);
+        const d = renderInst.mapUniformBufferF32(GX_Material.GX_Program.ub_PacketParams);
+        fillPacketParamsDataWithOptimizations(this.material, d, offs, packetParams);
     }
 
     public setOnRenderInst(device: GfxDevice, cache: GfxRenderCache, renderInst: GfxRenderInst): void {
@@ -515,7 +526,7 @@ export class GXShapeHelperGfx {
     }
 
     public setOnRenderInst(renderInst: GfxRenderInst, packet: LoadedVertexDraw | null = null): void {
-        renderInst.allocateUniformBuffer(ub_PacketParams, ub_PacketParamsBufferSize);
+        //renderInst.allocateUniformBuffer(ub_PacketParams, ub_PacketParamsBufferSize);
         renderInst.allocateUniformBuffer(ub_VtxBlendParams, ub_VtxBlendParamsBufferSize);
         renderInst.setInputLayoutAndState(this.inputLayout, this.inputState);
 
@@ -527,12 +538,6 @@ export class GXShapeHelperGfx {
         }
 
         renderInst.drawIndexes(packet.indexCount, packet.indexOffset);
-    }
-
-    public fillPacketParams(packetParams: PacketParams, renderInst: GfxRenderInst): void {
-        let offs = renderInst.getUniformBufferOffset(ub_PacketParams);
-        const d = renderInst.mapUniformBufferF32(ub_PacketParams);
-        fillPacketParamsData(d, offs, packetParams);
     }
 
     public fillVtxBlendParams(vtxBlendParams: VtxBlendParams, renderInst: GfxRenderInst): void {
@@ -555,8 +560,8 @@ export const gxBindingLayouts: GfxBindingLayoutDescriptor[] = [
 const sceneParams = new SceneParams();
 export function fillSceneParamsDataOnTemplate(renderInst: GfxRenderInst, viewerInput: Viewer.ViewerRenderInput, customLODBias: number | null = null, sceneParamsScratch = sceneParams): void {
     fillSceneParams(sceneParamsScratch, viewerInput.camera.projectionMatrix, viewerInput.backbufferWidth, viewerInput.backbufferHeight, customLODBias);
-    let offs = renderInst.getUniformBufferOffset(ub_SceneParams);
-    const d = renderInst.mapUniformBufferF32(ub_SceneParams);
+    let offs = renderInst.getUniformBufferOffset(GX_Material.GX_Program.ub_SceneParams);
+    const d = renderInst.mapUniformBufferF32(GX_Material.GX_Program.ub_SceneParams);
     fillSceneParamsData(d, offs, sceneParams);
 }
 
@@ -564,7 +569,7 @@ export class GXRenderHelperGfx extends GfxRenderHelper {
     public pushTemplateRenderInst(): GfxRenderInst {
         const template = super.pushTemplateRenderInst();
         template.setBindingLayouts(gxBindingLayouts);
-        template.allocateUniformBuffer(ub_SceneParams, ub_SceneParamsBufferSize);
+        template.allocateUniformBuffer(GX_Material.GX_Program.ub_SceneParams, ub_SceneParamsBufferSize);
         return template;
     }
 }
