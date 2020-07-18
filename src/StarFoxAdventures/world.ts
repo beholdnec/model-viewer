@@ -369,7 +369,7 @@ class WorldRenderer extends SFARenderer {
                 // drawWorldSpacePoint(ctx, modelCtx.viewerInput.camera.clipFromWorldMatrix, light.position);
                 // TODO: use correct parameters
                 colorCopy(lights[i].Color, light.color);
-                lights[i].CosAtten = vec3.fromValues(1.0, 0.0, 0.0); // TODO
+                vec3.set(lights[i].CosAtten, 1.0, 0.0, 0.0); // TODO
                 vec3.copy(lights[i].DistAtten, light.distAtten);
     
                 i++;

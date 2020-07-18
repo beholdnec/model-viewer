@@ -194,8 +194,7 @@ export class Model {
 
     public joints: Joint[] = [];
     public coarseBlends: CoarseBlend[] = [];
-    public jointTfMatrices: mat4[] = [];
-    public bindMatrices: mat4[] = [];
+    public jointTranslations: vec3[] = [];
     public invBindTranslations: vec3[] = [];
 
     public yTranslate: number = 0;
@@ -584,8 +583,7 @@ export class Model {
             //     console.log(`trans: ${this.modelTranslate}`);
             // }
 
-            this.jointTfMatrices = nArray(this.joints.length, () => mat4.create());
-            this.bindMatrices = nArray(this.joints.length, () => mat4.create());
+            this.jointTranslations = nArray(this.joints.length, () => vec3.create());
             this.invBindTranslations = nArray(this.joints.length, () => vec3.create());
             for (let i = 0; i < this.joints.length; i++) {
                 const joint = this.joints[i];
@@ -593,8 +591,7 @@ export class Model {
                     throw Error(`wtf? joint's bone number doesn't match its index!`);
                 }
 
-                mat4.fromTranslation(this.jointTfMatrices[i], joint.translation);
-                mat4.fromTranslation(this.bindMatrices[i], joint.bindTranslation);
+                vec3.copy(this.jointTranslations[i], joint.translation);
                 vec3.negate(this.invBindTranslations[i], joint.bindTranslation);
             }
         }
@@ -1074,29 +1071,10 @@ export class ModelInstance implements BlockRenderer {
             const joint = this.model.joints[i];
 
             const boneMtx = this.boneMatrices[joint.boneNum];
-            mat4.identity(boneMtx);
-            if (this.model.hasBetaFineSkinning) {
-                mat4.translate(boneMtx, boneMtx, this.model.invBindTranslations[joint.boneNum]);
-            }
-
-            if (!this.model.hasBetaFineSkinning) {
-                // FIXME: Use this code for beta models with fine skinning
-                mat4.mul(boneMtx, this.jointPoseMatrices[joint.boneNum], boneMtx);
-                mat4.mul(boneMtx, this.model.jointTfMatrices[joint.boneNum], boneMtx);
-                if (joint.parent != 0xff) {
-                    mat4.mul(boneMtx, this.boneMatrices[joint.parent], boneMtx);
-                }
-            } else {
-                // FIXME: figure out what is broken about fine-skinned beta models that the following code is needed
-                let jointWalker = joint;
-                while (true) {
-                    mat4.mul(boneMtx, this.jointPoseMatrices[jointWalker.boneNum], boneMtx);
-                    mat4.mul(boneMtx, this.model.jointTfMatrices[jointWalker.boneNum], boneMtx);
-                    if (jointWalker.parent === 0xff) {
-                        break;
-                    }
-                    jointWalker = this.model.joints[jointWalker.parent];
-                }
+            mat4.fromTranslation(boneMtx, this.model.jointTranslations[joint.boneNum]);
+            mat4.mul(boneMtx, boneMtx, this.jointPoseMatrices[joint.boneNum]);
+            if (joint.parent != 0xff) {
+                mat4.mul(boneMtx, this.boneMatrices[joint.parent], boneMtx);
             }
         }
 
