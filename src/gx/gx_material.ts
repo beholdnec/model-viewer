@@ -14,7 +14,7 @@ import { AttachmentStateSimple, setAttachmentStateSimple } from '../gfx/helpers/
 import { MathConstants, transformVec3Mat4w1, transformVec3Mat4w0 } from '../MathHelpers';
 import { DisplayListRegisters, VertexAttributeInput } from './gx_displaylist';
 import { DeviceProgram } from '../Program';
-import { NUM_BLEND_MATRICES } from './gx_render';
+import { NUM_BLEND_MATRICES, ub_VtxBlendParamsBufferSize } from './gx_render';
 import { Vertex } from '../BanjoKazooie/f3dex';
 
 // TODO(jstpierre): Move somewhere better...
@@ -389,6 +389,10 @@ export function getPacketParamsBlockSize(material: GXMaterial): number {
         size += 4*3 * 1;
 
     return size;
+}
+
+export function getVtxBlendParamsBlockSize(material: GXMaterial): number {
+    return ub_VtxBlendParamsBufferSize;
 }
 
 export class GX_Program extends DeviceProgram {

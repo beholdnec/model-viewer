@@ -152,10 +152,11 @@ function fillPacketParamsDataWithOptimizations(material: GX_Material.GXMaterial,
     assert(d.length >= offs);
 }
 
-export function fillVtxBlendParamsData(d: Float32Array, bOffs: number, vtxBlendParams: VtxBlendParams): void {
+function fillVtxBlendParamsDataWithOptimizations(material: GX_Material.GXMaterial, d: Float32Array, bOffs: number, vtxBlendParams: VtxBlendParams): void {
     let offs = bOffs;
 
     offs += fillMatrix4x3(d, offs, vtxBlendParams.u_ModelView);
+    // TODO: implement varying number of blend matrices
     for (let i = 0; i < NUM_BLEND_MATRICES; i++)
         offs += fillMatrix4x3(d, offs, vtxBlendParams.u_BlendMtx[i]);
 
@@ -357,6 +358,7 @@ export class GXMaterialHelperGfx {
     public megaStateFlags: Partial<GfxMegaStateDescriptor>;
     public materialParamsBufferSize: number;
     public packetParamsBufferSize: number;
+    public vtxBlendParamsBufferSize: number;
     private materialHacks: GX_Material.GXMaterialHacks = {};
     private program!: GX_Material.GX_Program;
     private gfxProgram: GfxProgram | null = null;
@@ -367,6 +369,7 @@ export class GXMaterialHelperGfx {
 
         this.calcMaterialParamsBufferSize();
         this.calcPacketParamsBufferSize();
+        this.calcVtxBlendParamsBufferSize();
         this.createProgram();
 
         this.megaStateFlags = {};
@@ -379,6 +382,10 @@ export class GXMaterialHelperGfx {
 
     public calcPacketParamsBufferSize(): void {
         this.packetParamsBufferSize = GX_Material.getPacketParamsBlockSize(this.material);
+    }
+
+    public calcVtxBlendParamsBufferSize(): void {
+        this.vtxBlendParamsBufferSize = GX_Material.getVtxBlendParamsBlockSize(this.material);
     }
 
     public cacheProgram(device: GfxDevice, cache: GfxRenderCache): void {
@@ -419,6 +426,12 @@ export class GXMaterialHelperGfx {
         const offs = renderInst.allocateUniformBuffer(GX_Material.GX_Program.ub_PacketParams, this.packetParamsBufferSize);
         const d = renderInst.mapUniformBufferF32(GX_Material.GX_Program.ub_PacketParams);
         fillPacketParamsDataWithOptimizations(this.material, d, offs, packetParams);
+    }
+    
+    public allocateVtxBlendParamsDataOnInst(renderInst: GfxRenderInst, vtxBlendParams: VtxBlendParams): void {
+        const offs = renderInst.allocateUniformBuffer(GX_Material.GX_Program.ub_VtxBlendParams, this.vtxBlendParamsBufferSize);
+        const d = renderInst.mapUniformBufferF32(GX_Material.GX_Program.ub_VtxBlendParams);
+        fillVtxBlendParamsDataWithOptimizations(this.material, d, offs, vtxBlendParams);
     }
 
     public setOnRenderInst(device: GfxDevice, cache: GfxRenderCache, renderInst: GfxRenderInst): void {
@@ -526,8 +539,6 @@ export class GXShapeHelperGfx {
     }
 
     public setOnRenderInst(renderInst: GfxRenderInst, packet: LoadedVertexDraw | null = null): void {
-        //renderInst.allocateUniformBuffer(ub_PacketParams, ub_PacketParamsBufferSize);
-        renderInst.allocateUniformBuffer(ub_VtxBlendParams, ub_VtxBlendParamsBufferSize);
         renderInst.setInputLayoutAndState(this.inputLayout, this.inputState);
 
         if (packet === null) {
@@ -538,12 +549,6 @@ export class GXShapeHelperGfx {
         }
 
         renderInst.drawIndexes(packet.indexCount, packet.indexOffset);
-    }
-
-    public fillVtxBlendParams(vtxBlendParams: VtxBlendParams, renderInst: GfxRenderInst): void {
-        let offs = renderInst.getUniformBufferOffset(ub_VtxBlendParams);
-        const d = renderInst.mapUniformBufferF32(ub_VtxBlendParams);
-        fillVtxBlendParamsData(d, offs, vtxBlendParams);
     }
 
     public destroy(device: GfxDevice): void {

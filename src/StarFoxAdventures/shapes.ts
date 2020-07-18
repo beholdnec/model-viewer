@@ -207,13 +207,14 @@ export class ShapeGeometry {
                 mat4.translate(this.vtxBlendParams.u_BlendMtx[i], this.vtxBlendParams.u_BlendMtx[i], this.invBindTranslations[slot.boneNum]);
         }
 
-        this.shapeHelper.fillVtxBlendParams(this.vtxBlendParams, renderInst);
+        material.allocateVtxBlendParamsDataOnInst(renderInst, this.vtxBlendParams);
     }
 }
 
 export interface ShapeMaterial {
     setOnRenderInst: (device: GfxDevice, renderInstManager: GfxRenderInstManager, renderInst: GfxRenderInst, modelMatrix: mat4, modelCtx: ModelRenderContext, boneMatrices: mat4[]) => void;
     allocatePacketParamsDataOnInst(renderInst: GfxRenderInst, packetParams: PacketParams): void;
+    allocateVtxBlendParamsDataOnInst(renderInst: GfxRenderInst, vtxBlendParams: VtxBlendParams): void;
 }
 
 export class CommonShapeMaterial implements ShapeMaterial {
@@ -283,6 +284,10 @@ export class CommonShapeMaterial implements ShapeMaterial {
 
     public allocatePacketParamsDataOnInst(renderInst: GfxRenderInst, packetParams: PacketParams): void {
         this.materialHelper.allocatePacketParamsDataOnInst(renderInst, packetParams);
+    }
+
+    public allocateVtxBlendParamsDataOnInst(renderInst: GfxRenderInst, vtxBlendParams: VtxBlendParams): void {
+        this.materialHelper.allocateVtxBlendParamsDataOnInst(renderInst, vtxBlendParams);
     }
 }
 
