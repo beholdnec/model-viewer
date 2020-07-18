@@ -1,7 +1,7 @@
 import { GfxDevice, GfxWrapMode, GfxMipFilterMode, GfxTexFilterMode } from '../gfx/platform/GfxPlatform';
 import * as GX from '../gx/gx_enum';
 import { GXMaterialBuilder } from "../gx/GXMaterialBuilder";
-import { GXMaterial, SwapTable } from '../gx/gx_material';
+import { GXMaterial, SwapTable, getVertexInputLocation } from '../gx/gx_material';
 import { MaterialParams, ColorKind } from '../gx/gx_render';
 import { GfxFormat, makeTextureDescriptor2D } from '../gfx/platform/GfxPlatform';
 
@@ -14,6 +14,7 @@ import { SFAAnimationController } from './animation';
 import { colorFromRGBA, Color, colorCopy, colorNewFromRGBA } from '../Color';
 import { EnvfxManager } from './envfx';
 import { TextureMapping } from '../TextureHolder';
+import { VertexAttributeInput } from '../gx/gx_displaylist';
 
 interface ShaderLayer {
     texId: number | null;
@@ -482,10 +483,39 @@ class StandardMaterial extends MaterialBase {
         this.aprevIsValid = false;
         
         if (!this.isMapBlock) {
-            // Not a map block. Just do basic texturing.
+            // Not a map block. Just do basic texturing. FIXME: add more material logic
 
-            this.mb.setUseVtxBlends(this.useVtxBlends);
-            this.mb.setUsePnMtxIdx(!this.useVtxBlends);
+            if (this.useVtxBlends) {
+                this.mb.setUsePnMtxIdx(false);
+                this.mb.setCustomizer({
+                    generateVertexShaderDecls(): string {
+                        return `
+    layout(location = ${getVertexInputLocation(VertexAttributeInput.COUNT + 0)}) in vec4 a_BlendIndices;
+    layout(location = ${getVertexInputLocation(VertexAttributeInput.COUNT + 1)}) in vec4 a_BlendWeights;
+
+    Mat4x3 GetVtxBlendMatrix(uint idx) {
+        return u_VtxBlendMtx[idx];
+    }
+    
+    Mat4x3 GetPosVtxBlendMatrix() {
+        return
+            a_BlendWeights.x * GetVtxBlendMatrix(uint(a_BlendIndices.x)) +
+            a_BlendWeights.y * GetVtxBlendMatrix(uint(a_BlendIndices.y));
+    }
+`;
+                    },
+                    generateMulPos(src: string): string {
+                        return `Mul(u_ModelView, vec4(Mul(GetPosVtxBlendMatrix(), ${src}), 1.0))`;
+                    },
+                    generateMulNrm(src: string): string {
+                        // FIXME: this is totally broken
+                        return `${src}.xyz`;
+                        return `Mul(u_ModelView, vec4(MulNormalMatrix(GetPosVtxBlendMatrix(), ${src}), 1.0))`;
+                        //return `MulNormalMatrix(u_ModelView, vec4(MulNormalMatrix(GetPosVtxBlendMatrix(), ${src}), 1.0))`;
+                        //return `MulNormalMatrix(u_ModelView * GetPosVtxBlendMatrix(), ${src}), 1.0)`;
+                    },
+                });
+            }
 
             if (this.shader.layers.length > 0 && this.shader.layers[0].texId !== null) {
                 const texMap = this.genTexMap(makeMaterialTexture(this.texFetcher.getTexture(this.device, this.shader.layers[0].texId!, true)));

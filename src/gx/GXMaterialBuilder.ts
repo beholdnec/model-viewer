@@ -1,5 +1,5 @@
 
-import { TevStage, IndTexStage, TexGen, ColorChannelControl, GXMaterial, LightChannelControl, AlphaTest, RopInfo, SwapTable } from "./gx_material";
+import { TevStage, IndTexStage, TexGen, ColorChannelControl, GXMaterial, LightChannelControl, AlphaTest, RopInfo, SwapTable, GXMaterialCustomizer } from "./gx_material";
 import * as GX from "./gx_enum";
 import { autoOptimizeMaterial } from "./gx_render";
 
@@ -110,7 +110,7 @@ export class GXMaterialBuilder {
     private indTexStages: IndTexStage[] = [];
     private alphaTest: AlphaTest;
     private ropInfo: RopInfo;
-    private useVtxBlends?: boolean;
+    private customizer?: GXMaterialCustomizer;
     private usePnMtxIdx?: boolean;
 
     constructor(private name: string | null = null) {
@@ -133,6 +133,7 @@ export class GXMaterialBuilder {
         this.setBlendMode(GX.BlendMode.NONE, GX.BlendFactor.SRCALPHA, GX.BlendFactor.INVSRCALPHA, GX.LogicOp.CLEAR);
         this.setZMode(true, GX.CompareType.LEQUAL, true);
 
+        this.customizer = undefined;
         this.usePnMtxIdx = undefined;
     }
 
@@ -340,8 +341,8 @@ export class GXMaterialBuilder {
         this.ropInfo.depthWrite = depthWrite;
     }
 
-    public setUseVtxBlends(v: boolean): void {
-        this.useVtxBlends = v;
+    public setCustomizer(v?: GXMaterialCustomizer): void {
+        this.customizer = v;
     }
 
     public setUsePnMtxIdx(v: boolean): void {
@@ -363,7 +364,7 @@ export class GXMaterialBuilder {
             indTexStages: this.indTexStages.map(copyIndTexStage),
             alphaTest: copyAlphaTest(this.alphaTest),
             ropInfo: copyRopInfo(this.ropInfo),
-            useVtxBlends: this.useVtxBlends,
+            customizer: this.customizer,
             usePnMtxIdx: this.usePnMtxIdx,
         };
         autoOptimizeMaterial(material);

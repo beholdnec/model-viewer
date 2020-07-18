@@ -22,6 +22,12 @@ export const EFB_WIDTH = 640;
 export const EFB_HEIGHT = 528;
 
 // #region Material definition.
+export interface GXMaterialCustomizer {
+    generateVertexShaderDecls(): string;
+    generateMulPos?(src: string): string;
+    generateMulNrm?(src: string): string;
+}
+
 export interface GXMaterial {
     // Debugging & ID
     name: string;
@@ -43,7 +49,7 @@ export interface GXMaterial {
     ropInfo: RopInfo;
 
     // Optimization and other state.
-    useVtxBlends?: boolean;
+    customizer?: GXMaterialCustomizer;
     usePnMtxIdx?: boolean;
     useTexMtxIdx?: boolean[];
     hasPostTexMtxBlock?: boolean;
@@ -504,11 +510,6 @@ ${this.generateLightAttnFn(chan, lightName)}
         return this.material.lightChannels.map((lightChannel, i) => {
             return this.generateLightChannel(lightChannel, `v_Color${i}`, i);
         }).join('\n');
-    }
-
-    private generateMulPntMatrixBlended(src: string, funcName: string = `Mul`): string {
-        // TODO
-        return `Mul(u_ModelView, vec4(${funcName}(GetPosVtxBlendMatrix(), ${src}), 1.0))`;
     }
 
     // Output is a vec3, src is a vec4.
@@ -1204,22 +1205,14 @@ ${this.generateFogFunc(`t_Fog`)}
             return `layout(location = ${i}) in ${this.generateAttributeStorageType(a.format)} a_${a.name};`;
         }).join('\n');
 
-        if (this.material.useVtxBlends) {
-            // TODO: support general custom attributes
-            S += `
-    layout(location = ${vtxAttributeGenDefs.length + 0}) in vec4 a_BlendIndices;
-    layout(location = ${vtxAttributeGenDefs.length + 1}) in vec4 a_BlendWeights;
-`;
-        }
-
         return S;
     }
 
     private generateMulPos(): string {
         const src = `vec4(a_Position.xyz, 1.0)`;
 
-        if (this.material.useVtxBlends)
-            return this.generateMulPntMatrixBlended(src);
+        if (this.material.customizer?.generateMulPos)
+            return this.material.customizer.generateMulPos(src);
 
         // Default to using pnmtxidx
         const usePnMtxIdx = this.material.usePnMtxIdx !== undefined ? this.material.usePnMtxIdx : true;
@@ -1232,8 +1225,8 @@ ${this.generateFogFunc(`t_Fog`)}
     private generateMulNrm(): string {
         const src = `vec4(a_Normal.xyz, 0.0)`;
 
-        if (this.material.useVtxBlends)
-            return this.generateMulPntMatrixBlended(src, `MulNormalMatrix`);
+        if (this.material.customizer?.generateMulNrm)
+            return this.material.customizer.generateMulNrm(src);
 
         // Default to using pnmtxidx.
         const usePnMtxIdx = this.material.usePnMtxIdx !== undefined ? this.material.usePnMtxIdx : true;
@@ -1260,19 +1253,7 @@ ${this.generateTexCoordVaryings()}
         this.vert = `
 ${both}
 ${this.generateVertAttributeDefs()}
-
-${this.material.useVtxBlends ? `
-Mat4x3 GetVtxBlendMatrix(uint idx) {
-    return u_VtxBlendMtx[idx];
-}
-
-Mat4x3 GetPosVtxBlendMatrix() {
-    // TODO: configurable matrix count? 2-4?
-    return
-        a_BlendWeights.x * GetVtxBlendMatrix(uint(a_BlendIndices.x)) +
-        a_BlendWeights.y * GetVtxBlendMatrix(uint(a_BlendIndices.y));
-}
-` : ``}
+${this.material.customizer ? this.material.customizer.generateVertexShaderDecls() : ``}
 
 Mat4x3 GetPosTexMatrix(float t_MtxIdxFloat) {
     uint t_MtxIdx = uint(t_MtxIdxFloat);
